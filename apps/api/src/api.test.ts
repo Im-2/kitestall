@@ -161,3 +161,27 @@ describe("SERV budget and abuse caps (SERV_MODE fallback_only: no live spend)", 
     expect((await t.neg({ item_id: "day-pass", qty: 1, offer_cents: 2000, message: "x" }, { "x-forwarded-for": "1.1.1.1, 9.9.9.9" })).status).toBe(429); // spoofing the first entry does not help
   });
 });
+
+describe("final-round rule R-FINAL-ACCEPT (code-computed best-and-final)", () => {
+  const go = async (t: ReturnType<typeof mk>, offers: number[]) => { let sid: string | undefined; let last: any; for (const o of offers) { last = await (await t.post("/shops/nomad/negotiate", { session_id: sid, item_id: "day-pass", qty: 1, offer_cents: o, message: "ok" })).json(); sid = last.session_id; } return last; };
+  const pay = async (t: ReturnType<typeof mk>, q: any) => { const req = (await (await t.post("/shops/nomad/checkout", { quote_id: q.quote_id })).json()).accepts[0]; const r = await t.post("/shops/nomad/checkout", { quote_id: q.quote_id }, await payHdr(req)); return (await r.json()).receipt; };
+  it("accepts a final-round offer above best-and-final at the buyer's offer, lists the rule in the public policy, and the receipt verifies", async () => {
+    const t = mk(); const last = await go(t, [1000, 1000, 2150]);
+    expect(last.status).toBe("accepted"); expect(last.ask_cents).toBe(2150); expect(last.rules_fired).toContain("R-FINAL-ACCEPT");
+    const pol = await (await t.app.request("/shops/nomad/policy")).json(); expect(pol.public.rules.map((r: any) => r.id)).toContain("R-FINAL-ACCEPT");
+    const rc = await pay(t, last.quote); expect(rc.rules_fired).toContain("R-FINAL-ACCEPT");
+    const v = await (await t.app.request(`/receipts/${rc.receipt_id}/verify`)).json(); expect(v.ok).toBe(true);
+  });
+  it("a low final offer gets a best-and-final counter above the floor, which the buyer can then take (no SERV call)", async () => {
+    const t = mk(); const r3 = await go(t, [1000, 1000, 1000]);
+    expect(r3.status).toBe("counter"); expect(r3.final).toBe(true); expect(r3.ask_cents).toBeGreaterThan(2000); expect(r3.ask_cents).toBeLessThan(2200);
+    const take = await (await t.post("/shops/nomad/negotiate", { session_id: r3.session_id, item_id: "day-pass", qty: 1, offer_cents: r3.ask_cents, message: "deal" })).json();
+    expect(take.status).toBe("accepted"); expect(take.ask_cents).toBe(r3.ask_cents); expect(take.serv.note).toMatch(/no SERV call/);
+    const rc = await pay(t, take.quote); const v = await (await t.app.request(`/receipts/${rc.receipt_id}/verify`)).json(); expect(v.ok).toBe(true);
+  });
+  it("a fourth offer below the standing ask is rejected", async () => {
+    const t = mk(); const r3 = await go(t, [1000, 1000, 1000]);
+    const r4 = await (await t.post("/shops/nomad/negotiate", { session_id: r3.session_id, item_id: "day-pass", qty: 1, offer_cents: r3.ask_cents - 1, message: "x" })).json();
+    expect(r4.status).toBe("rejected");
+  });
+});

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { SEED_SHOPS, generateKey, derivePub, policyHash, type PolicySpec } from "@kitestall/core";
+import { SEED_SHOPS, generateKey, derivePub, policyHash, withFinalRule, type PolicySpec } from "@kitestall/core";
 import { now, row, rows, run, tx, type DB } from "./db.ts";
 
 /** SHOP_SIGNING_KEYS = JSON {"<shopId>":"<ed25519 seed, base64url>"}. Env wins so receipts keep verifying across ephemeral deploys. */
@@ -30,7 +30,7 @@ export function seed(db: DB, env: NodeJS.ProcessEnv = process.env, historyFile?:
       if (!row(db, "SELECT 1 x FROM policies WHERE shop_id=? AND active=1", s.id)) {
         const version = (row(db, "SELECT MAX(version) v FROM policies WHERE shop_id=?", s.id)?.v ?? 0) + 1; // historic (imported) versions stay immutable
         const pct = Number(env[`FLOOR_PCT_${s.id.toUpperCase()}`] ?? s.policy.private.floor.default_pct_of_list);
-        const p: PolicySpec = { ...s.policy, version, created_at: now(), private: { floor: { default_pct_of_list: pct }, salt: randomBytes(16).toString("hex") } };
+        const p: PolicySpec = { ...s.policy, public: withFinalRule(s.policy.public), version, created_at: now(), private: { floor: { default_pct_of_list: pct }, salt: randomBytes(16).toString("hex") } };
         run(db, "INSERT INTO policies(shop_id,version,hash,public_json,private_json,created_at,active) VALUES(?,?,?,?,?,?,1)", s.id, p.version, policyHash(p), JSON.stringify(p.public), JSON.stringify(p.private), p.created_at);
       }
     }
@@ -62,6 +62,22 @@ export function importHistory(db: DB, file: string): { imported: number; skipped
     }
   });
   return { imported, skipped };
+}
+
+/** Publishes a NEW policy version (same private part) when the active policy does not yet list the public R-FINAL-ACCEPT rule. */
+export function ensureFinalRule(db: DB): number {
+  let upgraded = 0;
+  tx(db, () => {
+    for (const p of rows(db, "SELECT * FROM policies WHERE active=1")) {
+      const pub = JSON.parse(p.public_json); if (pub.rules?.some((r: { id: string }) => r.id === "R-FINAL-ACCEPT")) continue;
+      const next = withFinalRule(pub); const version = (row(db, "SELECT MAX(version) v FROM policies WHERE shop_id=?", p.shop_id)?.v ?? 0) + 1;
+      const spec: PolicySpec = { shop_id: p.shop_id, version, created_at: now(), public: next, private: JSON.parse(p.private_json) };
+      run(db, "UPDATE policies SET active=0 WHERE shop_id=?", p.shop_id);
+      run(db, "INSERT INTO policies(shop_id,version,hash,public_json,private_json,created_at,active) VALUES(?,?,?,?,?,?,1)", p.shop_id, version, policyHash(spec), JSON.stringify(next), p.private_json, spec.created_at);
+      upgraded++;
+    }
+  });
+  return upgraded;
 }
 
 /** Boot-time check: both seed shops have a wallet-independent active policy and a catalog. Throws so a broken boot fails fast instead of serving empty pages. */
