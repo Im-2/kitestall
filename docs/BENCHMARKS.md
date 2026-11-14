@@ -87,4 +87,6 @@ Cost is an estimate: token usage × catalog price (inference only; SERV feature 
 | + multipath + shadow (blocked 1, errors 0) | 7 | 5504 | 7279 | 639 | 0.00094 |
 | + kronos + multipath (blocked 0, errors 8) | 0 | null | null | null | null |
 
+**Kronos was NOT measured:** its row errored on every call (a wrong model id on the first attempt, then insufficient SERV credits), so it shows n=0. No Kronos figure or claim is made anywhere. Shadow Agent rows above are from the bench run; Shadow is used in production only for the demo shopper on accept/final rounds.
+
 Full 3-round negotiation (production config gpt-5.4-mini-serv-multipath + prompt guard + schema): p50 6979 ms, p95 8731 ms, mean est. cost $0.00195 per negotiation (n=5).

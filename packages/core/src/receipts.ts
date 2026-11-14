@@ -11,7 +11,7 @@ export interface Receipt {
   rounds: number;
   rules_fired: string[];
   policy: { version: number; hash: string };
-  serv: { model: string; features: string[]; request_ids: string[]; status: "live" | "fallback" | "mixed" };
+  serv: { model: string; features: string[]; request_ids: string[]; status: "live" | "fallback" | "mixed" | "none" };
   payment: { network: string; tx_hash: string; payer: string; pay_to: string; amount_wei: string; settled_via?: string };
   passport?: { status: string };
   issued_at: string;
@@ -45,6 +45,17 @@ export function signReceipt(r: Receipt, seed: string): Receipt {
 export function verifySignature(r: Receipt, publicKey: string): boolean {
   if (!r.signature?.startsWith("ed25519:")) return false;
   try { return edVerify(null, body(r), pubKey(publicKey), Buffer.from(r.signature.slice(8), "base64url")); } catch { return false; }
+}
+
+/** Signs any JSON document (RFC 8785 canonical form, ed25519) with a shop key; used for firm quotes. */
+export function signPayload<T extends object>(doc: T, seed: string): T & { signature: string } {
+  const { signature: _s, ...rest } = doc as T & { signature?: string };
+  return { ...(rest as T), signature: "ed25519:" + edSign(null, Buffer.from(canonicalize(rest) as string), privKey(seed)).toString("base64url") };
+}
+export function verifyPayload(doc: { signature?: string } & Record<string, unknown>, publicKey: string): boolean {
+  if (!doc.signature?.startsWith("ed25519:")) return false;
+  const { signature, ...rest } = doc;
+  try { return edVerify(null, Buffer.from(canonicalize(rest) as string), pubKey(publicKey), Buffer.from(signature.slice(8), "base64url")); } catch { return false; }
 }
 
 export interface Check { name: string; ok: boolean; detail: string }

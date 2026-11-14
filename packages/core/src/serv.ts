@@ -53,7 +53,7 @@ export async function servChat(
   const tools: unknown[] = [{ type: "function", function: { name: "serv_prompt_guard" } }];
   if (cfg.shadow) {
     features.push("shadow");
-    tools.push({ type: "function", function: { name: "serv_shadow_agent", description: "Validate output.", parameters: { type: "object", properties: { hint: { type: "string", default: shadowHint ?? "Output must follow the schema." }, max_iterations: { type: "integer", default: 2 } } } } });
+    tools.push({ type: "function", function: { name: "serv_shadow_agent", description: "Validate output.", parameters: { type: "object", properties: { hint: { type: "string", default: shadowHint ?? "Output must follow the schema." }, max_iterations: { type: "integer", default: 1 } } } } });
   }
   if (cfg.multipath) features.push("multipath");
   if (cfg.kronos) features.push("kronos");

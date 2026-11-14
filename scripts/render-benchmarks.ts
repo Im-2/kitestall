@@ -49,6 +49,7 @@ export function renderBenchmarks() {
     L.push(`## Latency and cost (${b.generated_at})`, "", "Cost is an estimate: token usage × catalog price (inference only; SERV feature surcharges are not in API responses).", "",
       "| Variant | n | p50 ms | p95 ms | mean tokens | est. $/call |", "|---|---|---|---|---|---|");
     for (const r of b.variants) L.push(`| ${r.name} | ${r.n} | ${r.p50} | ${r.p95} | ${r.mean_tokens} | ${r.mean_cost_usd} |`);
+    L.push("", "**Kronos was NOT measured:** its row errored on every call (a wrong model id on the first attempt, then insufficient SERV credits), so it shows n=0. No Kronos figure or claim is made anywhere. Shadow Agent rows above are from the bench run; Shadow is used in production only for the demo shopper on accept/final rounds.");
     L.push("", `Full 3-round negotiation (production config ${b.production.name}): p50 ${b.production.neg_p50} ms, p95 ${b.production.neg_p95} ms, mean est. cost $${b.production.neg_mean_cost_usd} per negotiation (n=${b.production.neg_n}).`, "");
   }
   writeFileSync("docs/BENCHMARKS.md", L.join("\n"));

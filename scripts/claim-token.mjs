@@ -4,7 +4,7 @@ import { createPublicClient, createWalletClient, http, parseAbi, formatEther, de
 import { privateKeyToAccount } from "viem/accounts";
 const chain = defineChain({ id: 2368, name: "Kite Testnet", nativeCurrency: { name: "KITE", symbol: "KITE", decimals: 18 }, rpcUrls: { default: { http: ["https://rpc-testnet.gokite.ai"] } } });
 const pc = createPublicClient({ chain, transport: http() });
-const acct = privateKeyToAccount(process.env.DEMO_SHOPPER_PRIVATE_KEY);
+const acct = privateKeyToAccount((process.env.SHOPPER_PRIVATE_KEY ?? process.env.DEMO_SHOPPER_PRIVATE_KEY));
 const wc = createWalletClient({ account: acct, chain, transport: http() });
 const A = "0x8E04D099b1a8Dd20E6caD4b2Ab2B405B98242ec9";
 const abi = parseAbi(["function claim()", "function claimTo(address)", "function balanceOf(address) view returns (uint256)"]);

@@ -25,6 +25,9 @@ services:
       - { key: IP_DAILY_CALLS, value: "30" }
       - { key: GLOBAL_SERV_CALLS_PER_MIN, value: "25" }
       - { key: DEMO_RUNS_PER_DAY, value: "8" }
+      - { key: FIRM_QUOTE_FEE_CENTS, value: "5" }
+      - { key: FIRM_QUOTE_TTL_SECONDS, value: "600" }
+      - { key: DEMO_SHADOW, value: "1" }   # Shadow Agent only for the demo shopper on accept/final rounds (set 0 to disable)
       - { key: KITE_NETWORK, value: kite-testnet }
       - { key: KITE_FACILITATOR_URL, value: "https://facilitator.pieverse.io" }
       - { key: KITE_EXPLORER_BASE, value: "https://testnet.kitescan.ai" }
@@ -38,4 +41,5 @@ services:
       - { key: SHOP_WALLET_ADDRESS_NOMAD, sync: false }
       - { key: SHOP_WALLET_ADDRESS_BRIGHTBEAN, sync: false }
       - { key: DEMO_SHOPPER_PRIVATE_KEY, sync: false }
+      - { key: PLATFORM_WALLET_ADDRESS, sync: false }   # receives the 5-cent firm-quote fee (testnet)
       - { key: SHOP_SIGNING_KEYS, sync: false }

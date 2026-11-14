@@ -62,6 +62,6 @@ describe("best-and-final", () => {
     }), { numRuns: 500 });
   });
   it("withFinalRule adds the public rule once", () => {
-    const pub = { rules: [{ id: "R-A" }] }; const once = withFinalRule(pub); expect(once.rules.map((r) => r.id)).toEqual(["R-A", "R-FINAL-ACCEPT"]); expect(withFinalRule(once).rules.length).toBe(2);
+    const pub = { rules: [{ id: "R-A" }] }; const once = withFinalRule(pub); expect(once.rules.map((r) => r.id)).toEqual(["R-A", "R-FINAL-ACCEPT", "R-FIRM-QUOTE"]); expect(withFinalRule(once).rules.length).toBe(3);
   });
 });

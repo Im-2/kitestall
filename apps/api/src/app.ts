@@ -6,11 +6,11 @@ import { z } from "zod";
 import { randomBytes, createHash } from "node:crypto";
 import { createPublicClient, http } from "viem";
 import {
-  negotiateRound, withFinalRule, build402, decodePayment, centsToWei, weiToCents, feeBps, signReceipt, verifyReceipt, policyHash, publicView, compilePolicy,
+  negotiateRound, withFinalRule, firmPriceCents, signPayload, build402, decodePayment, centsToWei, weiToCents, feeBps, signReceipt, verifyReceipt, policyHash, publicView, compilePolicy,
   PolicySpecSchema, effectiveFloor, decide, fallbackProposal, KITE_TESTNET, DevSigner, estimateCostUsd,
   type PolicySpec, type Facilitator, type ServConfig, type Receipt, type Check,
 } from "@kitestall/core";
-import { runShopper } from "@kitestall/shopper";
+import { runShopper, runFirmQuoteShopper } from "@kitestall/shopper";
 import { now, row, rows, run, tx, type DB } from "./db.ts";
 import { exportHistory } from "./history.ts";
 import { budgetCfg, budgetState, chargeFor, initBudget, recordSpend } from "./budget.ts";
@@ -20,6 +20,8 @@ export interface Deps {
   /** on-chain verification of the settled tx; injectable for tests */
   txCheck?: (hash: string, payTo: string, amountWei: string, asset: string) => Promise<Check>;
   staticDir?: string;
+  /** test hook: fixed secret for the demo-shopper Shadow Agent opt-in header (default: random per boot) */
+  demoSecret?: string;
   /** boot-time seed summary (computed once at startup) reported by the cheap /healthz */
   boot?: { shops: number; items: number; sales: number };
 }
@@ -64,6 +66,8 @@ export function createApp(d: Deps) {
   const explorer = env.KITE_EXPLORER_BASE || KITE_TESTNET.explorer;
   const feeBpsV = Number(env.PLATFORM_FEE_BPS ?? 100), quoteFee = Number(env.QUOTE_FEE_CENTS ?? 1), freeQ = Number(env.FREE_QUOTES_PER_DAY ?? 10);
   const bcfg = budgetCfg(env); initBudget(db, bcfg);
+  // The server-side demo shopper proves itself with a per-boot secret to opt in to Shadow Agent verification. Public Arena traffic can never enable it.
+  const demoSecret = d.demoSecret ?? randomBytes(16).toString("hex");
   const sessionCallCap = Number(env.SESSION_MAX_CALLS ?? 8), ipDailyCalls = Number(env.IP_DAILY_CALLS ?? 30), globalCallsPerMin = Number(env.GLOBAL_SERV_CALLS_PER_MIN ?? 25), demoRunsPerDay = Number(env.DEMO_RUNS_PER_DAY ?? 8);
   const baseUrl = () => env.PUBLIC_BASE_URL || `http://localhost:${env.PORT ?? 8787}`;
   // behind Render's proxy the LAST x-forwarded-for entry is the one the proxy itself saw (the first can be client-supplied); no header = loopback (our own demo shopper)
@@ -93,6 +97,9 @@ Seller-side storefront agent. Discover: GET ${baseUrl()}/.well-known/kitestall.j
 3. On status "accepted" you get a single-use quote. POST /shops/{shop}/checkout {"quote_id"} -> HTTP 402 with x402 requirements (scheme exact, network eip155:2368, asset ${KITE_TESTNET.asset}, amount in wei = agreed price).
 4. Sign an EIP-3009 TransferWithAuthorization, base64 the x402 payload, retry checkout with header X-PAYMENT. Response: voucher + ed25519-signed receipt.
 5. Verify any receipt: GET /receipts/{id}/verify.
+Optional, paid (testnet): POST /shops/{shop}/firm-quote {"item_id","qty"} -> 402 for a small fee (platform wallet); pay with the same X-PAYMENT flow to receive a signed time-locked fixed price and a quote_id for /checkout.
+Example agent (copy it): scripts/example-shopper.mjs in https://github.com/Im-2/kitestall (viem + Node). Guide: docs/SHOP_WITH_YOUR_AGENT.md.
+Limits: 8 messages per session, 30 per IP per day. Prompt Guard screens every message; a flagged message does not use a round, rephrase and retry.
 Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
 `));
 
@@ -152,11 +159,14 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
     const bstate = budgetState(db, bcfg); const burst = limited("global-serv", globalCallsPerMin, 60_000);
     const killSwitch = bstate.capped || burst; const capReason = bstate.reason ?? (burst ? "traffic burst protection" : null);
     emitTrace(sid, { phase: "guard", detail: "Prompt Guard screening buyer text" });
+    // Shadow Agent (validator) only for the demo shopper and only on accept / best-and-final candidates, to keep SERV spend low
+    const isDemo = c.req.header("x-kitestall-demo") === demoSecret;
+    const shadowOn = !killSwitch && isDemo && env.DEMO_SHADOW !== "0" && (round >= policy.public.max_rounds || (b.offer_cents != null && b.offer_cents >= Math.floor(sess.ask_cents * 0.95)));
     const r = await negotiateRound({
       policy, shopName: shop.name, itemId: item.id, itemName: item.name, listCents: item.list_cents, qty: b.qty, stock: item.stock,
-      currentAskCents: sess.ask_cents, offerCents: b.offer_cents ?? null, round, buyerMessage: b.message, serv: killSwitch ? { ...d.serv, mode: "fallback_only" } : d.serv,
+      currentAskCents: sess.ask_cents, offerCents: b.offer_cents ?? null, round, buyerMessage: b.message, serv: killSwitch ? { ...d.serv, mode: "fallback_only" } : { ...d.serv, shadow: shadowOn },
     });
-    if (!killSwitch) recordSpend(db, "negotiate", chargeFor(r.serv, bcfg)); // estimated spend persists in the DB
+    if (!killSwitch) recordSpend(db, "negotiate", chargeFor(r.serv, bcfg, shadowOn)); // estimated spend persists in the DB
     emitTrace(sid, { phase: "decision", guard: r.guard, concession: r.concession, action: r.action, status: r.status, ask_cents: r.askCents, rules: r.rulesFired, serv_status: r.servStatus });
     run(db, "INSERT INTO rounds(session_id,shop_id,round,buyer_message,offer_cents,status,ask_cents,message,rules_json,guard,serv_status,concession,action,serv_json,est_cost_usd,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
       sid, shopId, round, (b.message ?? "").slice(0, 600), b.offer_cents ?? null, r.status, r.askCents, r.message, JSON.stringify(r.rulesFired), r.guard, r.servStatus, r.concession, r.action, JSON.stringify(r.serv), r.serv?.estCostUsd ?? 0, now());
@@ -246,7 +256,7 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
         const rcpt: Receipt = {
           receipt_id: id("rc"), shop_id: shopId, item: { id: q.item_id, qty: q.qty }, list_price_cents: item.list_cents, agreed_price_cents: q.unit_price_cents, rounds: rds.length,
           rules_fired: rules, policy: { version: pol.version, hash: ph },
-          serv: { model: JSON.parse(rds.at(-1)?.serv_json ?? "null")?.model ?? "none", features: feats, request_ids: reqIds, status: statuses.size > 1 ? "mixed" : statuses.has("fallback") ? "fallback" : "live" },
+          serv: { model: JSON.parse(rds.at(-1)?.serv_json ?? "null")?.model ?? "none", features: feats, request_ids: reqIds, status: statuses.size > 1 ? "mixed" : statuses.has("fallback") ? "fallback" : statuses.has("code") ? "none" : "live" },
           payment: { network: KITE_TESTNET.network, tx_hash: st.transaction, payer: a.from, pay_to: shop.wallet, amount_wei: wei, settled_via: st.raw?.via ?? "pieverse" },
           passport: { status: "not_verified_by_merchant" }, issued_at: now(),
         };
@@ -263,6 +273,52 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
       run(db, "UPDATE quotes SET status='needs_reconcile' WHERE id=?", q.id);
       return err(c, 500, "fulfilment_failed", "Payment settled but fulfilment failed; flagged for reconciliation", { tx_hash: st.transaction });
     }
+  });
+
+  // ---------- firm quote: a tiny x402-paid product (testnet) ----------
+  // Pay a small fee (default 5 cents, to the PLATFORM wallet) and receive a signed, time-locked price with no haggling. Same 402 -> X-PAYMENT -> verify -> settle path as /checkout
+  // (Pieverse first, self-relay fallback). The fee is recorded in the ledger as COLLECTED (accrued_only=0). The price is derived only from public numbers (see firmPriceCents).
+  const firmFeeCents = Number(env.FIRM_QUOTE_FEE_CENTS ?? 5), firmTtlSec = Number(env.FIRM_QUOTE_TTL_SECONDS ?? 600);
+  const FirmZ = z.object({ item_id: z.string().max(80), qty: z.number().int().min(1).max(50).default(1) });
+  app.post("/shops/:shop/firm-quote", async (c) => {
+    if (limited(`firm:${ip(c)}`, 20, 60_000)) return err(c, 429, "rate_limited", "Slow down");
+    const shopId = c.req.param("shop"); const shop = shopRow(shopId); if (!shop) return err(c, 404, "no_shop", "Unknown shop");
+    const payTo = env.PLATFORM_WALLET_ADDRESS || ""; if (!payTo) return err(c, 503, "no_platform_wallet", "Firm quotes are not enabled on this server (no platform wallet)");
+    const parsed = FirmZ.safeParse(await c.req.json().catch(() => null)); if (!parsed.success) return err(c, 400, "bad_request", parsed.error.issues[0]?.message ?? "invalid body");
+    const b = parsed.data; const item = row(db, "SELECT * FROM items WHERE shop_id=? AND id=?", shopId, b.item_id); if (!item) return err(c, 404, "no_item", "Unknown item");
+    if (item.stock < b.qty) return err(c, 409, "out_of_stock", "Out of stock");
+    const policy = loadPolicy(db, shopId)!; const unit = firmPriceCents(policy, item.id, item.list_cents);
+    const feeWei = centsToWei(firmFeeCents).toString();
+    const req402 = build402({ quoteId: "firm-quote", priceCents: firmFeeCents, payTo, shopName: "Kitestall platform", description: `Firm quote (Kite TESTNET): ${b.qty} x ${item.name} at ${(unit / 100).toFixed(2)} each, guaranteed for ${Math.round(firmTtlSec / 60)} min. Fee ${(firmFeeCents / 100).toFixed(2)}`, resourceUrl: `${baseUrl()}/shops/${shopId}/firm-quote`, ttl: 300 });
+    const hdr = c.req.header("x-payment") ?? c.req.header("payment-signature");
+    if (!hdr) return c.json({ ...req402, firm_quote_preview: { unit_price_cents: unit, total_cents: unit * b.qty, valid_seconds: firmTtlSec, fee_cents: firmFeeCents } }, 402);
+    const pay = decodePayment(hdr); if (!pay?.payload?.authorization) return err(c, 400, "bad_payment", "Malformed X-PAYMENT");
+    const a = pay.payload.authorization; const accepted = req402.accepts[0]!; const low = (s: string) => String(s).toLowerCase();
+    if (low(a.to) !== low(payTo) || low(pay.accepted?.payTo) !== low(payTo)) return err(c, 402, "wrong_payee", "payTo does not match the platform wallet");
+    if (a.value !== feeWei || pay.accepted?.amount !== feeWei) return err(c, 402, "wrong_amount", "Payment amount must equal the firm-quote fee exactly", { expected_wei: feeWei });
+    if (low(pay.accepted?.asset) !== low(accepted.asset)) return err(c, 402, "wrong_asset", "Unexpected asset");
+    if (row(db, "SELECT 1 x FROM payments WHERE nonce=?", a.nonce)) return err(c, 409, "replay", "Payment nonce already used");
+    const v: any = await d.facilitator.verify(pay, accepted);
+    if (!v?.isValid) return err(c, 402, "payment_invalid", `Facilitator rejected payment: ${v?.invalidReason ?? v?.error ?? "unknown"}`, { accepts: req402.accepts });
+    const st: any = await d.facilitator.settle(pay, accepted);
+    if (!st?.success || !st.transaction) return err(c, 502, "settle_failed", `Settlement failed: ${st?.errorReason ?? "unknown"}`);
+    const fqid = id("fq"); const sid = id("s"); const validUntil = new Date(Date.now() + firmTtlSec * 1000).toISOString(); const ph = row(db, "SELECT hash FROM policies WHERE shop_id=? AND version=?", shopId, policy.version).hash;
+    try {
+      tx(db, () => {
+        run(db, "INSERT INTO sessions(id,shop_id,item_id,qty,ask_cents,round,status,buyer,ip,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)", sid, shopId, item.id, b.qty, unit, 1, "accepted", a.from, ip(c), now());
+        run(db, "INSERT INTO rounds(session_id,shop_id,round,buyer_message,offer_cents,status,ask_cents,message,rules_json,guard,serv_status,concession,action,serv_json,est_cost_usd,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+          sid, shopId, 1, "", null, "accepted", unit, "Firm quote sold: fixed price, no haggling.", JSON.stringify(["R-FIRM-QUOTE", "R-STOCK-OK", "R-FLOOR-OK"]), "unknown", "code", "none", "accept_offer", "null", 0, now());
+        run(db, "INSERT INTO quotes(id,session_id,shop_id,item_id,qty,unit_price_cents,total_cents,policy_version,status,expires_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)", fqid, sid, shopId, item.id, b.qty, unit, unit * b.qty, policy.version, "open", validUntil, now());
+        run(db, "INSERT INTO payments(quote_id,nonce,tx_hash,payer,amount_wei,status,signer_kind,created_at) VALUES(?,?,?,?,?,?,?,?)", fqid, a.nonce, st.transaction, a.from, feeWei, "settled", "firm_quote", now());
+        run(db, "INSERT INTO ledger_fees(shop_id,kind,ref,amount_cents,accrued_only,created_at) VALUES(?,?,?,?,0,?)", shopId, "firm_quote_fee", fqid, firmFeeCents, now());
+      });
+    } catch (e) { return err(c, 500, "firm_quote_failed", `Fee settled on-chain (${st.transaction}) but the quote could not be recorded: ${(e as Error).message}`, { tx_hash: st.transaction }); }
+    const doc = signPayload({
+      kind: "kitestall-firm-quote", testnet: true, firm_quote_id: fqid, quote_id: fqid, shop_id: shopId, item: { id: item.id, qty: b.qty }, list_price_cents: item.list_cents, unit_price_cents: unit, total_cents: unit * b.qty,
+      valid_until: validUntil, policy: { version: policy.version, hash: ph }, rules_fired: ["R-FIRM-QUOTE"],
+      fee: { cents: firmFeeCents, network: KITE_TESTNET.network, tx_hash: st.transaction, payer: a.from, pay_to: payTo, settled_via: st.raw?.via ?? "pieverse" }, issued_at: now(),
+    }, shop.signing_seed);
+    return c.json({ firm_quote: doc, next: `POST /shops/${shopId}/checkout {"quote_id":"${fqid}"} within ${Math.round(firmTtlSec / 60)} minutes`, explorer_url: `${explorer}/tx/${st.transaction}`, testnet: true });
   });
 
   // ---------- orders, receipts, verify ----------
@@ -290,7 +346,7 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
       testnet: true, negotiations: n("SELECT COUNT(*) n FROM sessions"), rounds: n("SELECT COUNT(*) n FROM rounds"), blocked_attacks: n("SELECT COUNT(*) n FROM events WHERE kind='attack'"),
       fallback_rounds: n("SELECT COUNT(*) n FROM events WHERE kind='fallback'"), quotes: n("SELECT COUNT(*) n FROM quotes"), settled_sales: n("SELECT COUNT(*) n FROM orders"),
       volume_cents: n("SELECT COALESCE(SUM(total_cents),0) n FROM orders"), avg_discount_pct: disc == null ? null : Math.round(disc * 10) / 10,
-      fees_accrued_cents: n("SELECT COALESCE(SUM(amount_cents),0) n FROM ledger_fees"), serv_latency_p50_ms: lat.length ? lat[Math.floor(lat.length / 2)] : null, serv_live_rounds: lat.length, serv_budget: budgetState(db, bcfg),
+      fees_accrued_cents: n("SELECT COALESCE(SUM(amount_cents),0) n FROM ledger_fees WHERE accrued_only=1"), fees_collected_cents: n("SELECT COALESCE(SUM(amount_cents),0) n FROM ledger_fees WHERE accrued_only=0"), firm_quotes_sold: n("SELECT COUNT(*) n FROM ledger_fees WHERE kind='firm_quote_fee'"), serv_latency_p50_ms: lat.length ? lat[Math.floor(lat.length / 2)] : null, serv_live_rounds: lat.length, serv_budget: budgetState(db, bcfg),
     });
   });
   // Read-only public activity feed for the landing-page dashboard (redacted: no buyer text, no policy internals). Added for the UI redesign; existing endpoints are unchanged.
@@ -298,7 +354,8 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
     testnet: true,
     sales: rows(db, "SELECT o.id order_id, r.id receipt_id, o.shop_id, o.item_id, o.qty, o.total_cents, json_extract(r.json,'$.payment.tx_hash') tx_hash, json_extract(r.json,'$.payment.settled_via') settled_via, o.created_at FROM orders o JOIN receipts r ON r.order_id=o.id ORDER BY o.created_at DESC LIMIT 8"),
     rounds: rows(db, "SELECT shop_id, round, status, ask_cents, guard, serv_status, concession, created_at FROM rounds ORDER BY id DESC LIMIT 12"),
-    fees: rows(db, "SELECT kind, SUM(amount_cents) cents, COUNT(*) n FROM ledger_fees GROUP BY kind"),
+    fees: rows(db, "SELECT kind, SUM(amount_cents) cents, COUNT(*) n FROM ledger_fees WHERE accrued_only=1 GROUP BY kind"),
+    collected: rows(db, "SELECT kind, SUM(amount_cents) cents, COUNT(*) n FROM ledger_fees WHERE accrued_only=0 GROUP BY kind"),
     series: {
       discount_pct: rows(db, "SELECT ROUND(100.0*(i.list_cents-q.unit_price_cents)/i.list_cents,1) v FROM quotes q JOIN items i ON i.shop_id=q.shop_id AND i.id=q.item_id ORDER BY q.created_at DESC LIMIT 20").map((x) => x.v).reverse(),
       latency_ms: rows(db, "SELECT json_extract(serv_json,'$.latencyMs') v FROM rounds WHERE serv_status='live' AND serv_json IS NOT NULL ORDER BY id DESC LIMIT 20").map((x) => x.v).filter((v: unknown) => typeof v === "number").reverse(),
@@ -323,7 +380,8 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
       const signer = new DevSigner(pk, cap);
       await s.writeSSE({ data: JSON.stringify({ type: "scenario", scenario, simulated_session_cap_cents: cap ?? null, note: cap ? "Session cap is SIMULATED by the dev signer (no Passport session)." : undefined }) });
       const q: any[] = []; let wake: (() => void) | null = null; let done = false;
-      const p = runShopper({ baseUrl: `http://127.0.0.1:${env.PORT ?? 8787}`, shopId, itemId: item.id, budgetCents: item.list_cents, signer, eager: scenario === "story-a", onEvent: (e) => { q.push(e); wake?.(); } }).then((r) => { q.push({ type: "done", ok: r.ok, reason: r.reason }); done = true; wake?.(); });
+      const emitEv = (e: { type: string }) => { q.push(e); wake?.(); }; const self = `http://127.0.0.1:${env.PORT ?? 8787}`;
+      const p = (scenario === "firm" ? runFirmQuoteShopper({ baseUrl: self, shopId, itemId: item.id, signer, onEvent: emitEv }) : runShopper({ baseUrl: self, shopId, itemId: item.id, budgetCents: item.list_cents, signer, eager: scenario === "story-a", headers: { "x-kitestall-demo": demoSecret }, onEvent: emitEv })).then((r) => { q.push({ type: "done", ok: r.ok, reason: r.reason }); done = true; wake?.(); });
       while (!done || q.length) { while (q.length) await s.writeSSE({ data: JSON.stringify(q.shift()) }); if (!done) await new Promise<void>((res) => { wake = res; setTimeout(res, 20000); }); }
       await p;
     });
@@ -392,9 +450,11 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
     return c.json({ ok: true, version: ver, policy_hash: h });
   });
   app.get("/owner/ledger", (c) => c.json({
-    testnet: true, note: "Fees are ACCRUED in this ledger, not auto-collected, in the hackathon build.",
+    testnet: true, note: "Platform and quote fees are ACCRUED in this ledger, not auto-collected. Firm-quote fees are actually paid on Kite TESTNET to the platform wallet (collected) and listed separately.",
     sales: rows(db, "SELECT o.id order_id, o.shop_id, o.item_id, o.qty, o.total_cents, o.voucher, o.created_at, r.id receipt_id, json_extract(r.json,'$.payment.tx_hash') tx_hash FROM orders o JOIN receipts r ON r.order_id=o.id ORDER BY o.created_at DESC LIMIT 100").map((s) => ({ ...s, explorer_url: `${explorer}/tx/${s.tx_hash}` })),
-    fees: rows(db, "SELECT kind, SUM(amount_cents) cents, COUNT(*) n FROM ledger_fees GROUP BY kind"),
+    fees: rows(db, "SELECT kind, SUM(amount_cents) cents, COUNT(*) n FROM ledger_fees WHERE accrued_only=1 GROUP BY kind"),
+    collected: rows(db, "SELECT kind, SUM(amount_cents) cents, COUNT(*) n FROM ledger_fees WHERE accrued_only=0 GROUP BY kind"),
+    firm_quotes: rows(db, "SELECT f.ref firm_quote_id, f.shop_id, f.amount_cents, f.created_at, p.tx_hash, p.payer, q.item_id, q.qty, q.unit_price_cents, q.status FROM ledger_fees f LEFT JOIN payments p ON p.quote_id=f.ref LEFT JOIN quotes q ON q.id=f.ref WHERE f.kind='firm_quote_fee' ORDER BY f.id DESC LIMIT 50").map((x) => ({ ...x, explorer_url: x.tx_hash ? `${explorer}/tx/${x.tx_hash}` : null })),
     needs_reconcile: rows(db, "SELECT p.*, q.shop_id FROM payments p JOIN quotes q ON q.id=p.quote_id WHERE p.status IN ('needs_reconcile','settle_unknown')"),
   }));
   app.get("/owner/export-history", (c) => c.json(exportHistory(db))); // owner-only (token middleware): real sales + public policies, no private parts

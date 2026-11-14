@@ -69,7 +69,7 @@ export function ensureFinalRule(db: DB): number {
   let upgraded = 0;
   tx(db, () => {
     for (const p of rows(db, "SELECT * FROM policies WHERE active=1")) {
-      const pub = JSON.parse(p.public_json); if (pub.rules?.some((r: { id: string }) => r.id === "R-FINAL-ACCEPT")) continue;
+      const pub = JSON.parse(p.public_json); if (["R-FINAL-ACCEPT", "R-FIRM-QUOTE"].every((id) => pub.rules?.some((r: { id: string }) => r.id === id))) continue;
       const next = withFinalRule(pub); const version = (row(db, "SELECT MAX(version) v FROM policies WHERE shop_id=?", p.shop_id)?.v ?? 0) + 1;
       const spec: PolicySpec = { shop_id: p.shop_id, version, created_at: now(), public: next, private: JSON.parse(p.private_json) };
       run(db, "UPDATE policies SET active=0 WHERE shop_id=?", p.shop_id);

@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { describe, it, expect, beforeEach } from "vitest";
 import { createApp } from "./app.ts";
 import { openDb, run, row } from "./db.ts";
@@ -8,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const PAYTO = "0x8D06Dd5D6b9B634ade658ea5ab9c262e6787d8bb";
-const env = { SHOP_WALLET_ADDRESS_NOMAD: PAYTO, SHOP_WALLET_ADDRESS_BRIGHTBEAN: "0xdf0F91BfB6e7558FA4a1596195DFDC7424812244", OWNER_TOKEN: "tok", NODE_ENV: "test" } as NodeJS.ProcessEnv;
+const env = { SHOP_WALLET_ADDRESS_NOMAD: PAYTO, SHOP_WALLET_ADDRESS_BRIGHTBEAN: "0xdf0F91BfB6e7558FA4a1596195DFDC7424812244", OWNER_TOKEN: "tok", NODE_ENV: "test", PLATFORM_WALLET_ADDRESS: "0x2222222222222222222222222222222222222222" } as NodeJS.ProcessEnv;
 let txn = 0;
 const fac: Facilitator & { settles: number } = {
   settles: 0,
@@ -216,4 +217,60 @@ describe("owner flow without SERV: preview, publish (policy versioning), compile
     expect(JSON.stringify(pol)).not.toMatch(/salt|floor_default|default_pct/);
   });
   function mk2() { const db = openDb(":memory:"); seed(db, env); const app = createApp({ db, env, facilitator: fac, serv: { baseUrl: "", apiKey: "", model: "m", mode: "fallback_only" } }); return { db, app }; }
+});
+
+describe("paid firm quote (x402, testnet)", () => {
+  const PLAT = "0x2222222222222222222222222222222222222222";
+  it("402 -> pay fee -> signed time-locked quote -> normal checkout -> receipt verifies; fee is recorded as COLLECTED", async () => {
+    const t = mk();
+    const c1 = await t.post("/shops/nomad/firm-quote", { item_id: "day-pass", qty: 1 }); expect(c1.status).toBe(402);
+    const b = await c1.json(); const req = b.accepts[0];
+    expect(req.payTo).toBe(PLAT); expect(req.amount).toBe((5n * 10n ** 16n).toString()); expect(b.firm_quote_preview.unit_price_cents).toBe(2125);
+    const c2 = await t.post("/shops/nomad/firm-quote", { item_id: "day-pass", qty: 1 }, await payHdr(req)); expect(c2.status).toBe(200);
+    const out = await c2.json(); const fq = out.firm_quote;
+    expect(fq.unit_price_cents).toBe(2125); expect(fq.rules_fired).toEqual(["R-FIRM-QUOTE"]); expect(fq.testnet).toBe(true);
+    const keys = await (await t.app.request("/.well-known/kitestall-keys")).json(); expect(verifySignature({ ...fq } as any, "")).toBe(false); // wrong shape/key is rejected
+    expect(typeof keys.nomad).toBe("string");
+    const led = await (await t.app.request("/owner/ledger", { headers: { authorization: "Bearer tok" } })).json();
+    expect(led.collected.find((x: any) => x.kind === "firm_quote_fee").cents).toBe(5); expect(led.firm_quotes.length).toBe(1); expect(led.fees.find((x: any) => x.kind === "firm_quote_fee")).toBeUndefined();
+    const s = await (await t.app.request("/api/stats")).json(); expect(s.fees_collected_cents).toBe(5); expect(s.firm_quotes_sold).toBe(1);
+    // buy at the firm price through the normal checkout
+    const co = await (await t.post("/shops/nomad/checkout", { quote_id: fq.quote_id })).json(); const req2 = co.accepts[0]; expect(req2.amount).toBe((2125n * 10n ** 16n).toString());
+    const paid = await t.post("/shops/nomad/checkout", { quote_id: fq.quote_id }, await payHdr(req2)); expect(paid.status).toBe(200);
+    const rc = (await paid.json()).receipt; expect(rc.rules_fired).toContain("R-FIRM-QUOTE"); expect(rc.serv.status).toBe("none"); expect(rc.agreed_price_cents).toBe(2125);
+    const v = await (await t.app.request(`/receipts/${rc.receipt_id}/verify`)).json(); expect(v.ok).toBe(true);
+  });
+  it("rejects a wrong amount, a wrong payee and a replayed nonce", async () => {
+    const t = mk(); const req = (await (await t.post("/shops/nomad/firm-quote", { item_id: "day-pass", qty: 1 })).json()).accepts[0];
+    expect((await (await t.post("/shops/nomad/firm-quote", { item_id: "day-pass", qty: 1 }, await payHdr(req, { amount: "1" }))).json()).error.code).toBe("wrong_amount");
+    expect((await (await t.post("/shops/nomad/firm-quote", { item_id: "day-pass", qty: 1 }, await payHdr(req, { payTo: "0x1111111111111111111111111111111111111111" }))).json()).error.code).toBe("wrong_payee");
+    const h = await payHdr(req); expect((await t.post("/shops/nomad/firm-quote", { item_id: "day-pass", qty: 1 }, h)).status).toBe(200);
+    expect((await (await t.post("/shops/nomad/firm-quote", { item_id: "day-pass", qty: 1 }, h)).json()).error.code).toBe("replay");
+  });
+  it("is disabled without a platform wallet", async () => {
+    const db = openDb(":memory:"); const e = { ...env, PLATFORM_WALLET_ADDRESS: "" } as NodeJS.ProcessEnv; seed(db, e);
+    const app = createApp({ db, env: e, facilitator: fac, serv: { baseUrl: "", apiKey: "", model: "m", mode: "fallback_only" } });
+    expect((await app.request("/shops/nomad/firm-quote", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ item_id: "day-pass" }) })).status).toBe(503);
+  });
+});
+
+describe("Shadow Agent gating (demo shopper only, accept/final candidates only)", () => {
+  const modelJson = JSON.stringify({ action: "counter", concession: "small", rule_ids: [], message: "Happy to help." });
+  function liveApp() {
+    const db = openDb(":memory:"); seed(db, env); const tools: string[][] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_u: string, init: any) => { tools.push(JSON.parse(init.body).tools.map((t: any) => t.function.name)); return new Response(JSON.stringify({ id: "chatcmpl-x", choices: [{ message: { content: modelJson }, finish_reason: "stop" }], usage: { prompt_tokens: 100, completion_tokens: 20, total_tokens: 120 } }), { status: 200 }); }));
+    const e2 = { ...env, GLOBAL_SERV_CALLS_PER_MIN: "100000" } as NodeJS.ProcessEnv; const app = createApp({ db, env: e2, facilitator: fac, demoSecret: "s3cret", serv: { baseUrl: "http://serv.test", apiKey: "k", model: "gpt-5.4-mini", mode: "live" } });
+    const neg = (b: unknown, h: Record<string, string> = {}) => app.request("/shops/nomad/negotiate", { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "7.7." + Math.floor(Math.random() * 250) + "." + Math.floor(Math.random() * 250), ...h }, body: JSON.stringify(b) });
+    return { db, tools, neg };
+  }
+  it("public Arena traffic never uses Shadow Agent, even with a forged header and an accept-candidate offer", async () => {
+    const t = liveApp(); await t.neg({ item_id: "day-pass", qty: 1, offer_cents: 2490, message: "x" }); await t.neg({ item_id: "day-pass", qty: 1, offer_cents: 2490, message: "x" }, { "x-kitestall-demo": "guess" });
+    expect(t.tools.length).toBe(2); for (const names of t.tools) { expect(names).toContain("serv_prompt_guard"); expect(names).not.toContain("serv_shadow_agent"); }
+  });
+  it("the demo shopper gets Shadow only when the offer is near the ask or it is the final round", async () => {
+    const t = liveApp(); const h = { "x-kitestall-demo": "s3cret" };
+    await t.neg({ item_id: "day-pass", qty: 1, offer_cents: 1750, message: "x" }, h); // low opening offer: no shadow
+    await t.neg({ item_id: "day-pass", qty: 1, offer_cents: 2400, message: "x" }, h); // within 5% of the 25.00 ask: shadow
+    expect(t.tools[0]).not.toContain("serv_shadow_agent"); expect(t.tools[1]).toContain("serv_shadow_agent"); expect(t.tools[1]).toContain("serv_prompt_guard");
+  });
 });
