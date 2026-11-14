@@ -28,7 +28,7 @@ export async function runShopper(o: ShopperOpts): Promise<ShopperResult> {
   const item = cat.body.items.find((i: any) => i.id === o.itemId);
   if (!item) { emit("error", { message: "item not found" }); return { ok: false, reason: "item" }; }
   emit("discover", { shop: cat.body.shop.name, item: item.name, list_cents: item.list_cents, testnet: true });
-  let budget = o.budgetCents; // per-unit hard budget (what the signer/session will allow)
+  const budget = o.budgetCents; // per-unit hard budget (what the signer/session will allow)
 
   let cap = budget; let attempt = 0; let prevAsk: number | undefined;
   while (attempt < 3) {

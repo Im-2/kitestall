@@ -3,7 +3,7 @@ import { streamSSE } from "hono/streaming";
 import { compress } from "hono/compress";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { z } from "zod";
-import { randomBytes, randomUUID, createHash } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { createPublicClient, http } from "viem";
 import {
   negotiateRound, withFinalRule, build402, decodePayment, centsToWei, weiToCents, feeBps, signReceipt, verifyReceipt, policyHash, publicView, compilePolicy,

@@ -8,7 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "check": "pnpm -r --if-present typecheck && pnpm --filter @kitestall/core test && pnpm --filter @kitestall/api test",
+    "check": "pnpm lint && pnpm -r --if-present typecheck && pnpm --filter @kitestall/core test && pnpm --filter @kitestall/api test",
     "seed": "echo Seeding is idempotent and runs automatically on API start (apps/api/src/seed.ts)",
     "dev": "pnpm --filter @kitestall/api dev",
     "build": "pnpm --filter @kitestall/web build",
@@ -20,13 +20,19 @@
     "verify-receipt": "node scripts/verify-receipt.mjs",
     "smoke:serv": "node scripts/smoke-serv.mjs",
     "smoke:kite": "node scripts/smoke-kite.mjs",
-    "smoke:facilitator": "node scripts/smoke-facilitator.mjs"
+    "smoke:facilitator": "node scripts/smoke-facilitator.mjs",
+    "lint": "eslint ."
   },
   "dependencies": {
     "viem": "^2.57.19"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^17.14.0",
     "puppeteer-core": "^25.17.0",
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "typescript-eslint": "^8.72.2"
   }
 }

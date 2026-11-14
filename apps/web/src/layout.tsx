@@ -14,11 +14,11 @@ export function SiteHeader({ route }: { route: string }) {
   useEffect(() => setOpen(false), [route]);
   useEffect(() => { // mobile sheet: lock page scroll, close on Escape or when the viewport grows to desktop, restore focus
     if (!open) return;
-    const prev = document.body.style.overflow; document.body.style.overflow = "hidden";
+    const prev = document.body.style.overflow; document.body.style.overflow = "hidden"; const opener = btn.current;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     const mq = matchMedia("(min-width: 901px)"); const onMq = () => mq.matches && setOpen(false);
     addEventListener("keydown", onKey); mq.addEventListener("change", onMq);
-    return () => { document.body.style.overflow = prev; removeEventListener("keydown", onKey); mq.removeEventListener("change", onMq); btn.current?.focus(); };
+    return () => { document.body.style.overflow = prev; removeEventListener("keydown", onKey); mq.removeEventListener("change", onMq); opener?.focus(); };
   }, [open]);
   const link = (to: string, label: string, cls = "") => <a key={to} href={`#/${to}`} className={(route === to ? "on " : "") + cls} aria-current={route === to ? "page" : undefined}>{label}</a>;
   return (

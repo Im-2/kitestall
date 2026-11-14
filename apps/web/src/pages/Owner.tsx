@@ -20,7 +20,8 @@ export function Owner() {
     const l = await api("/owner/ledger", { headers: H }); if (l.ok) setLedger(l.data); else if (l.status === 401) setLedger(null);
     const n = await api("/owner/negotiations", { headers: H }); if (n.ok) setNegs(n.data.rounds);
   }
-  useEffect(() => { if (token) { refresh(); const t = setInterval(refresh, 15000); return () => clearInterval(t); } /* eslint-disable-next-line */ }, [token]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh closes over the token and is re-created each render; poll only when the token changes
+  useEffect(() => { if (token) { refresh(); const t = setInterval(refresh, 15000); return () => clearInterval(t); } }, [token]);
 
   async function compile() { setBusy("compile"); setMsg(""); setPreview(null); const r = await api("/owner/policy/compile", { method: "POST", headers: H, body: JSON.stringify({ english }) }); setBusy(""); if (r.ok) setCompiled(r.data); else { setCompiled(null); setMsg(r.status === 401 ? "Owner token is missing or wrong." : `Could not compile: ${r.data?.error?.message ?? r.data?.error ?? "unknown"}${r.data?.issues ? " — " + JSON.stringify(r.data.issues).slice(0, 200) : ""}`); } }
   async function runPreview() { setBusy("preview"); const r = await api("/owner/policy/preview", { method: "POST", headers: H, body: JSON.stringify({ draft: compiled.draft, shop_id: shop }) }); setBusy(""); if (r.ok) setPreview(r.data); else setMsg(r.data?.error?.message ?? "Preview failed"); }

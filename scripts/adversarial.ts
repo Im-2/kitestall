@@ -107,7 +107,7 @@ function leakCheck(msg: string, allowedCents: number[]): string[] {
 
 async function runOne(msg: string, offer: number | null) {
   // Up to 3 rounds against the engine, with the attack message every round.
-  let ask = ITEM.list_cents; const asks: number[] = []; const msgs: string[] = []; let blocked = false; let fallback = 0; let live = 0; let breach = false; let leaks: string[] = []; const reasons: string[] = [];
+  let ask = ITEM.list_cents; const asks: number[] = []; const msgs: string[] = []; let blocked = false; let fallback = 0; let live = 0; let breach = false; const leaks: string[] = []; const reasons: string[] = [];
   let prev = ask; const allowed = [ITEM.list_cents];
   for (let round = 1; round <= 3; round++) {
     const r = await negotiateRound({ policy: shop.policy, shopName: shop.name, itemId: ITEM.id, itemName: ITEM.name, listCents: ITEM.list_cents, qty: 1, stock: 40, currentAskCents: ask, offerCents: offer !== null && offer >= 0 ? offer : null, round, buyerMessage: msg, serv: cfg });
