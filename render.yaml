@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: kitestall
+    runtime: docker
+    plan: starter            # persistent disks need a paid instance type
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
+    autoDeploy: true
+    disk:
+      name: kitestall-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - { key: NODE_ENV, value: production }
+      - { key: DATABASE_PATH, value: /data/kitestall.db }
+      - { key: SERV_BASE_URL, value: "https://inference-api.openserv.ai/v1" }
+      - { key: SERV_MODEL_NEGOTIATE, value: gpt-5.4-mini }
+      - { key: SERV_MODEL_COMPILE, value: gpt-5.4-mini }
+      - { key: SERV_MODE, value: live }
+      - { key: KITE_NETWORK, value: kite-testnet }
+      - { key: KITE_FACILITATOR_URL, value: "https://facilitator.pieverse.io" }
+      - { key: KITE_EXPLORER_BASE, value: "https://testnet.kitescan.ai" }
+      - { key: PLATFORM_FEE_BPS, value: "100" }
+      - { key: QUOTE_FEE_CENTS, value: "1" }
+      - { key: FREE_QUOTES_PER_DAY, value: "10" }
+      # Secrets / per-deploy values: paste in the Render dashboard (values are NOT stored in git)
+      - { key: PUBLIC_BASE_URL, sync: false }
+      - { key: OPENSERV_API_KEY, sync: false }
+      - { key: SERV_DAILY_BUDGET_USD, sync: false }
+      - { key: OWNER_TOKEN, sync: false }
+      - { key: SHOP_WALLET_ADDRESS_NOMAD, sync: false }
+      - { key: SHOP_WALLET_ADDRESS_BRIGHTBEAN, sync: false }
+      - { key: DEMO_SHOPPER_PRIVATE_KEY, sync: false }
+      - { key: SHOP_SIGNING_KEYS, sync: false }

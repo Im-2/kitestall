@@ -4,11 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "smoke:serv": "node scripts/smoke-serv.mjs",
     "smoke:kite": "node scripts/smoke-kite.mjs",
     "smoke:facilitator": "node scripts/smoke-facilitator.mjs",
     "smoke": "node scripts/smoke-serv.mjs && node scripts/smoke-kite.mjs && node scripts/smoke-facilitator.mjs"
+  },
+  "dependencies": {
+    "viem": "^2.57.19"
   }
 }
