@@ -15,5 +15,8 @@
   },
   "dependencies": {
     "viem": "^2.57.19"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
   }
 }
