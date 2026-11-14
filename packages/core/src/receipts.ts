@@ -12,7 +12,7 @@ export interface Receipt {
   rules_fired: string[];
   policy: { version: number; hash: string };
   serv: { model: string; features: string[]; request_ids: string[]; status: "live" | "fallback" | "mixed" };
-  payment: { network: string; tx_hash: string; payer: string; pay_to: string; amount_wei: string };
+  payment: { network: string; tx_hash: string; payer: string; pay_to: string; amount_wei: string; settled_via?: string };
   passport?: { status: string };
   issued_at: string;
   signature?: string;

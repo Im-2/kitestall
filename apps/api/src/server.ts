@@ -2,7 +2,7 @@ import { serve } from "@hono/node-server";
 import { existsSync } from "node:fs";
 import { resolve, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PieverseFacilitator, KITE_TESTNET } from "@kitestall/core";
+import { PieverseFacilitator, SelfRelayFacilitator, FallbackFacilitator, KITE_TESTNET } from "@kitestall/core";
 import { createApp } from "./app.ts";
 import { openDb } from "./db.ts";
 import { seed } from "./seed.ts";
@@ -15,6 +15,9 @@ if (env.NODE_ENV === "production" && env.MOCK_PAYMENTS) throw new Error("MOCK_PA
 
 const db = openDb(env.DATABASE_PATH || resolve(root, "data/kitestall.db"));
 seed(db, env);
+const pieverse = new PieverseFacilitator(env.KITE_FACILITATOR_URL || KITE_TESTNET.facilitator);
+const relayerKey = env.RELAYER_PRIVATE_KEY || env.DEMO_SHOPPER_PRIVATE_KEY;
+const facilitator = relayerKey ? new FallbackFacilitator(pieverse, new SelfRelayFacilitator(relayerKey, pieverse)) : pieverse;
 const webDist = resolve(root, "apps/web/dist");
 const app = createApp({
   db,
@@ -28,7 +31,7 @@ const app = createApp({
     shadow: env.SERV_SHADOW === "1",
     mode: (env.SERV_MODE as "live" | "fallback_only") || "live",
   },
-  facilitator: new PieverseFacilitator(env.KITE_FACILITATOR_URL || KITE_TESTNET.facilitator),
+  facilitator,
 });
 const port = Number(env.PORT || 8787);
 serve({ fetch: app.fetch, port }, () => console.log(`Kitestall API on :${port} (Kite TESTNET, SERV mode=${env.SERV_MODE || "live"})`));

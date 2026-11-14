@@ -117,6 +117,8 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
     if (sess && sess.status !== "open") return err(c, 409, "session_closed", `Session is ${sess.status}`);
     const sid = sess?.id ?? (b.session_id && /^[A-Za-z0-9_-]{8,80}$/.test(b.session_id) ? b.session_id : id("s"));
     if (!sess) { run(db, "INSERT INTO sessions(id,shop_id,item_id,qty,ask_cents,round,status,buyer,ip,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)", sid, shopId, item.id, b.qty, item.list_cents, 0, "open", b.payer ?? null, ip(c), now()); sess = row(db, "SELECT * FROM sessions WHERE id=?", sid); }
+    const recent = row(db, "SELECT COUNT(*) n FROM sessions WHERE item_id=? AND (ip=? OR buyer=?) AND created_at>=?", b.item_id, ip(c), b.payer ?? "-", new Date(Date.now() - 3600_000).toISOString())?.n ?? 0;
+    if (ip(c) !== "local" && (!b.session_id || !row(db, "SELECT 1 x FROM rounds WHERE session_id=?", sid)) && recent > 8) return err(c, 429, "too_many_sessions", "Too many negotiation sessions for this item; try later");
     const round = sess.round + 1;
     emitTrace(sid, { phase: "received", round });
     if (round > policy.public.max_rounds) {
@@ -140,7 +142,7 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
     if (r.leakReplaced) run(db, "INSERT INTO events(kind,shop_id,session_id,detail,created_at) VALUES('leak_filter',?,?,?,?)", shopId, sid, JSON.stringify({ reason: r.leakReason }), now());
     let quote: any = null;
     const status = r.status;
-    run(db, "UPDATE sessions SET round=?, ask_cents=?, status=? WHERE id=?", round, status === "counter" || status === "accepted" ? r.askCents : sess.ask_cents, status === "accepted" ? "accepted" : status === "rejected" ? "rejected" : "open", sid);
+    run(db, "UPDATE sessions SET round=?, ask_cents=?, status=? WHERE id=?", r.attack ? sess.round : round, status === "counter" || status === "accepted" ? r.askCents : sess.ask_cents, status === "accepted" ? "accepted" : status === "rejected" ? "rejected" : "open", sid);
     if (status === "accepted") {
       const qid = id("q"); const ttl = policy.public.quote_ttl_seconds; const total = r.askCents * b.qty;
       run(db, "INSERT INTO quotes(id,session_id,shop_id,item_id,qty,unit_price_cents,total_cents,policy_version,status,expires_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)", qid, sid, shopId, item.id, b.qty, r.askCents, total, policy.version, "open", new Date(Date.now() + ttl * 1000).toISOString(), now());
@@ -222,7 +224,7 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
           receipt_id: id("rc"), shop_id: shopId, item: { id: q.item_id, qty: q.qty }, list_price_cents: item.list_cents, agreed_price_cents: q.unit_price_cents, rounds: rds.length,
           rules_fired: rules, policy: { version: pol.version, hash: ph },
           serv: { model: JSON.parse(rds.at(-1)?.serv_json ?? "null")?.model ?? "none", features: feats, request_ids: reqIds, status: statuses.size > 1 ? "mixed" : statuses.has("fallback") ? "fallback" : "live" },
-          payment: { network: KITE_TESTNET.network, tx_hash: st.transaction, payer: a.from, pay_to: shop.wallet, amount_wei: wei },
+          payment: { network: KITE_TESTNET.network, tx_hash: st.transaction, payer: a.from, pay_to: shop.wallet, amount_wei: wei, settled_via: st.raw?.via ?? "pieverse" },
           passport: { status: "not_verified_by_merchant" }, issued_at: now(),
         };
         const signed = signReceipt(rcpt, shop.signing_seed);

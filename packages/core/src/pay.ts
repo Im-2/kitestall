@@ -54,7 +54,7 @@ export class DevSigner implements PaymentSigner {
     const cents = Number(BigInt(req.amount) / 10n ** 16n);
     if (this.simulatedSessionCapCents !== undefined && cents > this.simulatedSessionCapCents) throw new SessionLimitError(this.simulatedSessionCapCents, cents);
     const now = Math.floor(Date.now() / 1000);
-    const authorization = { from: this.acct.address, to: req.payTo, value: req.amount, validAfter: String(now - 60), validBefore: String(now + req.maxTimeoutSeconds), nonce: "0x" + randomBytes(32).toString("hex") };
+    const authorization = { from: this.acct.address, to: req.payTo, value: req.amount, validAfter: "0", validBefore: String(now + req.maxTimeoutSeconds), nonce: "0x" + randomBytes(32).toString("hex") };
     const signature = await this.acct.signTypedData({
       domain: { name: req.extra.name, version: req.extra.version, chainId: KITE_TESTNET.chainId, verifyingContract: req.asset as `0x${string}` },
       types: { TransferWithAuthorization: [{ name: "from", type: "address" }, { name: "to", type: "address" }, { name: "value", type: "uint256" }, { name: "validAfter", type: "uint256" }, { name: "validBefore", type: "uint256" }, { name: "nonce", type: "bytes32" }] },
@@ -100,5 +100,45 @@ export class PieverseFacilitator implements Facilitator {
   async settle(p: PaymentPayload, req: PaymentRequirements) {
     const j = await this.post("/v2/settle", p, req, 0); // never blindly retry a settle (double-spend risk is nonce-protected, but stay safe)
     return { success: !!j.success, transaction: j.transaction ?? j.txHash, payer: j.payer, errorReason: j.errorReason ?? j.error, raw: j };
+  }
+}
+
+// ---------- Self-relay settlement (fallback) ----------
+import { createPublicClient, createWalletClient, http, parseAbi, defineChain, hexToSignature } from "viem";
+
+const kiteChain = defineChain({ id: 2368, name: "Kite Testnet", nativeCurrency: { name: "KITE", symbol: "KITE", decimals: 18 }, rpcUrls: { default: { http: [KITE_TESTNET.rpc] } } });
+const ERC3009 = parseAbi([
+  "function transferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce,uint8 v,bytes32 r,bytes32 s)",
+  "function authorizationState(address authorizer,bytes32 nonce) view returns (bool)",
+]);
+
+/** Submits the signed EIP-3009 authorization on-chain itself (relayer pays gas). Used only when the facilitator cannot settle; labeled "self-relay". */
+export class SelfRelayFacilitator implements Facilitator {
+  private relayer; constructor(pk: string, private inner: Facilitator) { this.relayer = privateKeyToAccount(pk as `0x${string}`); }
+  verify(p: PaymentPayload, r: PaymentRequirements) { return this.inner.verify(p, r); }
+  async settle(p: PaymentPayload, r: PaymentRequirements) {
+    const a = p.payload.authorization; const pc = createPublicClient({ chain: kiteChain, transport: http() });
+    try {
+      const used = await pc.readContract({ address: r.asset as `0x${string}`, abi: ERC3009, functionName: "authorizationState", args: [a.from as `0x${string}`, a.nonce as `0x${string}`] });
+      if (used) return { success: false, errorReason: "authorization_already_used" };
+      const sig = hexToSignature(p.payload.signature as `0x${string}`);
+      const wc = createWalletClient({ account: this.relayer, chain: kiteChain, transport: http() });
+      const hash = await wc.writeContract({ address: r.asset as `0x${string}`, abi: ERC3009, functionName: "transferWithAuthorization", args: [a.from as `0x${string}`, a.to as `0x${string}`, BigInt(a.value), BigInt(a.validAfter), BigInt(a.validBefore), a.nonce as `0x${string}`, Number(sig.v ?? (sig.yParity + 27)), sig.r, sig.s] });
+      const rc = await pc.waitForTransactionReceipt({ hash });
+      return rc.status === "success" ? { success: true, transaction: hash, payer: a.from, raw: { via: "self-relay" } } : { success: false, errorReason: "relay_tx_reverted", transaction: hash };
+    } catch (e) { return { success: false, errorReason: "relay_error: " + String((e as Error).message).slice(0, 120) }; }
+  }
+}
+
+/** Try the primary facilitator; if it reports a failed transaction (nothing executed), settle via the secondary. */
+export class FallbackFacilitator implements Facilitator {
+  constructor(private primary: Facilitator, private secondary: Facilitator) {}
+  verify(p: PaymentPayload, r: PaymentRequirements) { return this.primary.verify(p, r); }
+  async settle(p: PaymentPayload, r: PaymentRequirements) {
+    const a = await this.primary.settle(p, r);
+    if (a.success || a.transaction) return { ...a, raw: { ...(a.raw as object), via: "pieverse" } };
+    if ((a.raw as any)?.error === "facilitator_unreachable") return a; // unknown state: never double-settle blindly
+    const b = await this.secondary.settle(p, r);
+    return { ...b, raw: { ...(b.raw as object), via: "self-relay", primary_error: a.errorReason } };
   }
 }

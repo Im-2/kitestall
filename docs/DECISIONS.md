@@ -5,3 +5,8 @@
 - 2026-11-14 D4: Facilitator = Pieverse (https://facilitator.pieverse.io). Reason: Kite docs recommend it; confirmed live.
 - 2026-11-14 D5: Internal 1 token == $1 assumption kept; 1 cent = 10^16 wei.
 - 2026-11-14 D6: Prompt Guard block detection = finish_reason content_filter OR null content OR zero usage (see DISCOVERY). Treat ambiguous as blocked (fail closed).
+- 2026-11-14 D7: SQLite via built-in `node:sqlite` (Node >=22.13) instead of better-sqlite3: no native build on Windows/Render. Dockerfile must use Node 24.
+- 2026-11-14 D8: Plain CSS instead of Tailwind for the web app (custom ledger look, faster).
+- 2026-11-14 D9: Self-relay settlement fallback when Pieverse settle fails (see DISCOVERY). Labeled everywhere.
+- 2026-11-14 D10: Seed floors/salts: repo seed values are demo defaults and public; deployments get a random salt and may override floors via FLOOR_PCT_<SHOP>. README states the Arena tests the model/API path, not secrecy of the open-source defaults.
+- 2026-11-14 D11: A Prompt Guard block does not consume a negotiation round (false positives were ~10-15%); abuse is bounded by rate limits and hourly session caps.

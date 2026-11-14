@@ -30,12 +30,13 @@ export async function runShopper(o: ShopperOpts): Promise<ShopperResult> {
   emit("discover", { shop: cat.body.shop.name, item: item.name, list_cents: item.list_cents, testnet: true });
   let budget = o.budgetCents; // per-unit hard budget (what the signer/session will allow)
 
-  let cap = budget; let attempt = 0;
+  let cap = budget; let attempt = 0; let prevAsk: number | undefined;
   while (attempt < 3) {
     attempt++;
-    let sessionId: string | undefined; let offer = attempt > 1 ? cap : Math.min(Math.round(item.list_cents * 0.7), cap);
+    let sessionId: string | undefined; let offer = attempt > 1 ? Math.min(cap, prevAsk ?? cap) : Math.min(Math.round(item.list_cents * 0.7), cap);
     let quote: any = null; let lastAsk = item.list_cents;
     const maxR = o.maxRoundsPerSession ?? 3;
+    let blocks = 0;
     for (let round = 1; round <= maxR; round++) {
       const message = attempt === 1 ? (round === 1 ? "Hi! I'd like to buy this. Can you do a bit better than list?" : "Can we meet in the middle?")
         : `My hard spending limit is ${dollars(cap)} per unit. Can you work within that?`;
@@ -44,6 +45,7 @@ export async function runShopper(o: ShopperOpts): Promise<ShopperResult> {
       if (r.status !== 200) { emit("error", { message: r.body?.error?.message ?? "negotiate failed", status: r.status }); return { ok: false, reason: "negotiate" }; }
       sessionId = r.body.session_id; lastAsk = r.body.ask_cents;
       emit("counter", { round, status: r.body.status, ask_cents: r.body.ask_cents, message: r.body.message, rules_fired: r.body.rules_fired, serv: r.body.serv });
+      if (r.body.serv?.guard === "blocked" && blocks++ < 3) { round--; continue; } // a guard block does not consume a negotiation round
       if (r.body.status === "accepted") { quote = r.body.quote; break; }
       if (r.body.status === "rejected") break;
       if (o.eager && attempt === 1 && r.body.ask_cents <= cap) { offer = r.body.ask_cents; continue; }
@@ -52,6 +54,7 @@ export async function runShopper(o: ShopperOpts): Promise<ShopperResult> {
       // final-ask within budget: take it
       if (r.body.ask_cents <= cap && round === maxR) { offer = r.body.ask_cents; }
     }
+    prevAsk = lastAsk;
     if (!quote) {
       if (lastAsk <= cap && attempt < 3) { /* try once more at the ask */ continue; }
       emit("walk_away", { reason: "no agreement within budget", last_ask_cents: lastAsk, budget_cents: cap });

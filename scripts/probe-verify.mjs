@@ -7,7 +7,7 @@ const name = process.argv[3] || "PYUSD";
 const acct = privateKeyToAccount(process.env.DEMO_SHOPPER_PRIVATE_KEY);
 const payTo = process.env.SHOP_WALLET_ADDRESS_NOMAD;
 const now = Math.floor(Date.now() / 1000);
-const auth = { from: acct.address, to: payTo, value: "10000000000000000", validAfter: String(now - 60), validBefore: String(now + 300), nonce: "0x" + randomBytes(32).toString("hex") };
+const auth = { from: acct.address, to: payTo, value: process.argv[5] || "10000000000000000", validAfter: process.env.VA ?? String(now - 60), validBefore: String(now + 300), nonce: "0x" + randomBytes(32).toString("hex") };
 const signature = await acct.signTypedData({
   domain: { name, version: "1", chainId: 2368, verifyingContract: asset },
   types: { TransferWithAuthorization: [{ name: "from", type: "address" }, { name: "to", type: "address" }, { name: "value", type: "uint256" }, { name: "validAfter", type: "uint256" }, { name: "validBefore", type: "uint256" }, { name: "nonce", type: "bytes32" }] },
@@ -15,5 +15,5 @@ const signature = await acct.signTypedData({
 });
 const accepted = { scheme: "exact", network: "eip155:2368", asset, amount: auth.value, payTo, maxTimeoutSeconds: 300, extra: { name, version: "1" } };
 const body = { x402Version: 2, paymentPayload: { x402Version: 2, resource: { url: "https://kitestall.example/checkout", description: "probe", mimeType: "application/json" }, accepted, payload: { signature, authorization: auth } }, paymentRequirements: accepted };
-const r = await fetch("https://facilitator.pieverse.io/v2/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+const r = await fetch("https://facilitator.pieverse.io" + "/v2/" + (process.argv[4] || "verify"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 console.log(r.status, await r.text());

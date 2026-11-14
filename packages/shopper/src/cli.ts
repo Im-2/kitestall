@@ -2,6 +2,11 @@
 // kitestall-shopper --shop <url> --shop-id <id> --item <id> --budget <cents> [--qty n] [--sim-session-cap <cents>]
 import { DevSigner } from "@kitestall/core";
 import { runShopper } from "./index.ts";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+const envFile = resolve(fileURLToPath(import.meta.url), "../../../../.env");
+if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 const a = process.argv.slice(2);
 const arg = (k: string, d?: string) => { const i = a.indexOf("--" + k); return i >= 0 ? a[i + 1] : d; };
