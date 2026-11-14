@@ -12,3 +12,4 @@ keystore*
 !.env.example
 data/
 uiref/
+out/

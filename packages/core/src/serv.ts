@@ -120,7 +120,7 @@ export const dollars = (c: number) => `${Math.floor(c / 100)}.${String(c % 100).
 /** The model sees ONLY public data. No floor, cost, salt or private policy. */
 export type PromptStyle = "full" | "lean" | "lean-note";
 /** R-FINAL-ACCEPT is applied by code in the last round only; the model must not cite it (it would appear in receipts of rounds where it never fired). */
-const MODEL_HIDDEN_RULES = new Set(["R-FINAL-ACCEPT"]);
+const MODEL_HIDDEN_RULES = new Set(["R-FINAL-ACCEPT", "R-FIRM-QUOTE"]); // code-only rules: the model is never told about them
 
 export function buildPrompts(pub: PublicPolicy, c: NegotiationContext, style: PromptStyle = "full") {
   const visible = pub.rules.filter((r) => !MODEL_HIDDEN_RULES.has(r.id));

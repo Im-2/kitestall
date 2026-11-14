@@ -1,0 +1,74 @@
+{
+  "voice": "Matilda - Knowledgable, Professional",
+  "voice_id": "XrExE9yKIg1WjnnlVkGX",
+  "model": "eleven_multilingual_v2",
+  "scenes": [
+    {
+      "id": "s1-problem",
+      "screen": "Title card (Kitestall mark), then the landing hero",
+      "text": "Buyers' agents now come with spending limits. Sellers have nothing comparable. There is no safe way to let an agent negotiate for your shop, quote a price, and get paid, without trusting a prompt with your margin. Kitestall is the seller's side of that problem, built for the Kite track."
+    },
+    {
+      "id": "s2-landing",
+      "screen": "Landing page: live stats strip, bento cards, how it works",
+      "text": "A shop publishes its pricing rules. A storefront agent haggles with shoppers, and the agreed price travels inside an x four-oh-two payment request on Kite. Every number here is read live from the database: negotiations, settled sales, attacks blocked, estimated SERV budget. All of it is testnet."
+    },
+    {
+      "id": "s3-arena",
+      "screen": "Arena: live haggle (2-3 rounds), a prompt-injection message that gets flagged, live trace panel, then the accepted quote",
+      "text": "In the Arena, anyone can try to beat the shop. I offer twenty-one dollars, and the agent counters. Now an injection: I tell it to ignore its instructions, and claim the owner approved ninety percent off. SERV's Prompt Guard screens every buyer message. This one is flagged, and the price does not move. The trace shows the concession level the model chose, the rules that fired, and whether SERV or the labelled fallback decided. The model never sees the floor and never writes a price. It picks from a fixed list, and code turns that into cents, clamped at the floor."
+    },
+    {
+      "id": "s4-storya",
+      "screen": "Watch: Story A live run: offers, quote, budget limit hit, renegotiation, best-and-final acceptance, payment, tx link",
+      "text": "Now a shopper agent. Its session budget is lower than the first agreed price, so the payment is refused, and it tells the shop its hard limit. On Kite that limit comes from a Passport session. Here it is simulated by our dev signer. The shop renegotiates, and SERV's Shadow Agent re-checks the near-final decisions in this demo flow. In the final round, code computes a best-and-final price just above the floor, and accepts any offer at or above it, at the buyer's price. The shopper signs, the four-oh-two is paid straight to the shop's own wallet, and a real testnet transaction settles."
+    },
+    {
+      "id": "s5-verify",
+      "screen": "Receipt JSON, then Verify page: six checks green, Kitescan transaction",
+      "text": "The shop returns a signed receipt that names the public rules behind the price. Verify checks the signature, that every rule is in the published policy, that the price is inside the public bounds, the policy hash, and the transfer on Kitescan. It never needs the private floor. The signing key and the policy hash are the seller's verifiable identity."
+    },
+    {
+      "id": "s6-owner",
+      "screen": "Owner dashboard: compile a plain-English policy (live), what I understood, sales ledger with tx links, fees, collected firm quote",
+      "text": "For the owner, a policy starts as plain English. SERV compiles it into a draft, and nothing goes live until the owner approves. The ledger lists every sale with its transaction. Platform fees are accrued. The firm quote is different: that five-cent fee was actually paid over x402."
+    },
+    {
+      "id": "s7-honest",
+      "screen": "Benchmarks / adversarial results, then end card with Kite and OpenServ logos, URL and repo",
+      "text": "We replayed forty-five attacks. The floor was breached zero times, and nothing leaked. Prompt Guard blocked about three in four, and code contained the rest. To be clear: this is testnet. The session limit in this demo is simulated, because Kite Passport pays on mainnet only. Fees are accrued, not collected, and settlement uses our self-relay fallback. Kitestall: the seller's side of agent commerce. Live at kitestall dot onrender dot com. Code on GitHub, linked below."
+    }
+  ],
+  "display": [
+    [
+      "x four-oh-two",
+      "x402"
+    ],
+    [
+      "four-oh-two",
+      "402"
+    ],
+    [
+      "kitestall dot onrender dot com",
+      "kitestall.onrender.com"
+    ],
+    [
+      "twenty-one dollars",
+      "$21"
+    ],
+    [
+      "ninety percent",
+      "90%"
+    ],
+    [
+      "forty-five",
+      "45"
+    ]
+  ],
+  "voice_settings": {
+    "stability": 0.6,
+    "similarity_boost": 0.8,
+    "style": 0,
+    "use_speaker_boost": true
+  }
+}

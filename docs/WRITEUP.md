@@ -9,7 +9,7 @@ Kitestall is the seller's agent on Kite. A shop publishes a price policy; a stor
 - **Prompt Guard** screens every buyer-authored string; blocked text is never retried without it.
 - **Strict JSON schema**: the model picks a concession level (enum) and writes a message. It never sees the floor and never outputs a price; code converts levels to cents and enforces floor, stock, rounds and leaks.
 - **Multipath** for persona plus competing public rules; **policy compile** turns an owner's plain English into a validated draft.
-- **Shadow Agent** validates accept/final-round decisions, only for the demo shopper (about double latency; off for the public Arena to protect credits). **Kronos was not measured** and is not claimed.
+- **Shadow Agent** validates accept/final-round decisions in the Watch demo flow (about double latency; off in the public Arena to protect credits). **Kronos was not measured** and is not claimed.
 - Receipts carry SERV request ids and a live/fallback status; fallback rounds are never claimed as SERV decisions.
 
 ## What's new and working (all Kite testnet)
