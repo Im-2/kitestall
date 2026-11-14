@@ -11,15 +11,17 @@ export function Watch() {
   }
   const rc = events.find((e) => e.type === "receipt");
   return (
-    <div style={{ paddingTop: 22 }}>
-      <h1 style={{ fontSize: "2.2rem" }}>Watch a shopper agent buy</h1>
-      <p>A server-side demo shopper negotiates with Nomad Desk, then pays with a <b>real Kite testnet transaction</b>. It uses a <b>dev signer</b> (a funded testnet key), not a Kite Passport session, so the “session limit” in Story A is <b>simulated</b> and labeled as such.</p>
+    <div>
+      <div className="app-top"><h1>Watch a shopper agent buy</h1>
+      <p>A server-side demo shopper negotiates with Nomad Desk, then pays with a <b>real Kite testnet transaction</b>. It uses a <b>dev signer</b> (a funded testnet key), not a Kite Passport session, so the “session limit” in Story A is <b>simulated</b> and labeled as such.</p></div>
+      <section className="card">
       <div className="row" style={{ alignItems: "flex-end", maxWidth: 620 }}>
         <div><label htmlFor="sc">Scenario</label><select id="sc" value={scenario} onChange={(e) => setScenario(e.target.value)} disabled={running}><option value="story-a">Story A: meet in the middle (buyer limit vs seller floor)</option><option value="plain">Plain purchase</option></select></div>
         <button className="btn" onClick={run} disabled={running}>{running ? "Running…" : "Run the demo shopper"}</button>
       </div>
-      <p className="mono">Limited to 3 runs per 5 minutes. Each run spends testnet tokens from a demo wallet.</p>
-      <div className="card" aria-live="polite" style={{ minHeight: 120 }}>
+      <p className="sm">Limited to 3 runs per 5 minutes. Each run spends testnet tokens from a demo wallet.</p>
+      </section>
+      <div className="card" aria-live="polite" style={{ minHeight: 120, marginTop: 16 }}>
         {events.length === 0 ? <p className="empty">Nothing running. Press the button; each step streams in live.</p> : events.map((e, i) => (
           <div className="ev" key={i}>
             <div className="t">{LABEL[e.type] ?? e.type}</div>
@@ -41,11 +43,11 @@ export function Watch() {
           </div>
         ))}
       </div>
-      {rc && <div style={{ marginTop: 18 }}>
+      {rc && <div className="card" style={{ marginTop: 16 }}>
         <h2>Signed receipt</h2>
         <div className="receipt">{JSON.stringify(rc.receipt, null, 2)}</div>
-        <p><a className="btn" href={`#/verify?id=${rc.receipt.receipt_id}`}>Verify this receipt</a> <a className="btn ghost" href={`${EXPLORER}/tx/${rc.tx_hash}`} target="_blank" rel="noreferrer">View on Kitescan (testnet)</a></p>
-        <p className="mono">Settled via: {rc.receipt.payment.settled_via}. {rc.receipt.payment.settled_via === "self-relay" && "The Kite facilitator's settle call was failing, so the server submitted the signed EIP-3009 transfer itself."}</p>
+        <p className="row" style={{ marginTop: 12 }}><a className="btn primary" href={`#/verify?id=${rc.receipt.receipt_id}`}>Verify this receipt</a> <a className="btn ghost" href={`${EXPLORER}/tx/${rc.tx_hash}`} target="_blank" rel="noreferrer">View on Kitescan (testnet)</a></p>
+        <p className="sm">Settled via: {rc.receipt.payment.settled_via}. {rc.receipt.payment.settled_via === "self-relay" && "The Kite facilitator's settle call was failing, so the server submitted the signed EIP-3009 transfer itself."}</p>
       </div>}
     </div>
   );
