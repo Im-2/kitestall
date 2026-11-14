@@ -63,7 +63,7 @@ export function SiteFooter() {
         </div>
         <div className="ftr-mid">
           <div><b style={{ color: "#fff" }}>Built on</b><br />Kite testnet (x402, PYUSD) and OpenServ SERV Reasoning.</div>
-          <div><b style={{ color: "#fff" }}>Honest by design</b><br />Fees are accrued, not collected. Payments use a labeled dev signer, not a Passport session.</div>
+          <div><b style={{ color: "#fff" }}>Honest by design</b><br />Platform fees are accrued, not collected; the optional 5-cent firm-quote fee is paid on-chain (testnet). Payments use a labeled dev signer, not a Passport session.</div>
           <div><b style={{ color: "#fff" }}>Hackathon</b><br />OpenServ SERV Hackathon Ed. 02, Track 02: Kite. MIT licensed.</div>
         </div>
         <div className="ftr-bot">
