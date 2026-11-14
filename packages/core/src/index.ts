@@ -6,3 +6,4 @@ export * from "./receipts.ts";
 export * from "./serv.ts";
 export * from "./negotiate.ts";
 export * from "./seed.ts";
+export * from "./pay.ts";

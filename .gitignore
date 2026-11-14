@@ -4,3 +4,10 @@ dist
 *.db
 *.db-journal
 .DS_Store
+*.pem
+*.key
+wallet*.json
+keystore*
+.env.*
+!.env.example
+data/
