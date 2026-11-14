@@ -1,6 +1,6 @@
 // Composes the final video: scene clips (time-fitted to the narration), slides, narration audio (loudness-normalised) and burned-in captions.
 // Inputs: out/video/raw/*.mp4, out/video/slides/*.png, out/video/audio/*.mp3+json.  Output: out/video/kitestall-demo.mp4 and .srt
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { execFileSync, spawnSync } from "node:child_process";
 const n = JSON.parse(readFileSync("scripts/video/narration.json", "utf8"));
 const TEMPO = 1.04, LEAD = 1.0, GAP = 0.35, TAIL = 3.5, TITLE = 5.0, FADE = 0.2;
