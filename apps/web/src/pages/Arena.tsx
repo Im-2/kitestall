@@ -9,17 +9,33 @@ export function Arena() {
   const [item, setItem] = useState(""); const [offer, setOffer] = useState(""); const [text, setText] = useState("");
   const [msgs, setMsgs] = useState<Msg[]>([]); const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
   const [trace, setTrace] = useState<any[]>([]); const [last, setLast] = useState<any>(null); const [session] = useState(rid);
+  const [catErr, setCatErr] = useState(""); const [queued, setQueued] = useState(false); const [tries, setTries] = useState(0);
   const [board, setBoard] = useState<any[]>([]); const [attacks, setAttacks] = useState<any[]>([]); const chatEnd = useRef<HTMLDivElement>(null);
 
   useEffect(() => { api("/shops").then((r) => r.ok && setShops(r.data.shops)); }, []);
-  useEffect(() => { api(`/shops/${shop}/catalog`).then((r) => { if (r.ok) { setCat(r.data); setItem(r.data.items[0]?.id ?? ""); } }); setMsgs([]); setLast(null); }, [shop]);
+  // The shop may be waking from a free-plan cold start: retry the catalog a few times and never leave the Send button silently dead.
+  useEffect(() => {
+    let alive = true; setMsgs([]); setLast(null); setCatErr("");
+    const load = async (n: number) => {
+      const r = await api(`/shops/${shop}/catalog`);
+      if (!alive) return;
+      if (r.ok) { setCat(r.data); setItem(r.data.items[0]?.id ?? ""); setCatErr(""); return; }
+      if (n < 6) setTimeout(() => alive && load(n + 1), 3000);
+      else setCatErr("The shop did not respond. It may be waking up. Press Retry.");
+    };
+    load(0);
+    return () => { alive = false; };
+  }, [shop, tries]);
+  useEffect(() => { if (queued && item) { setQueued(false); void send(); } /* eslint-disable-next-line */ }, [queued, item]);
   useEffect(() => { const stop = sse(`/api/trace/${session}/stream`, (e) => setTrace((t) => [...t.slice(-30), e])); return () => { stop(); }; }, [session]);
   const loadBoards = () => { api("/api/arena/leaderboard").then((r) => r.ok && setBoard(r.data.leaders)); api("/api/arena/attacks").then((r) => r.ok && setAttacks(r.data.attacks)); };
   useEffect(() => { loadBoards(); const t = setInterval(loadBoards, 20000); return () => clearInterval(t); }, []);
   useEffect(() => { chatEnd.current?.scrollIntoView({ block: "end" }); }, [msgs]);
 
   async function send() {
-    if (busy) return; setErr(""); setBusy(true);
+    if (busy) return; setErr("");
+    if (!item) { setQueued(true); setMsgs((m) => (m.some((x) => x.text.startsWith("The shop is still waking")) ? m : [...m, { who: "sys", text: "The shop is still waking up. Your message will be sent automatically." }])); return; }
+    setBusy(true);
     const off = offer.trim() ? Math.round(parseFloat(offer) * 100) : undefined;
     if (offer.trim() && (!Number.isFinite(off!) || off! < 0)) { setErr("Offer must be a positive dollar amount."); setBusy(false); return; }
     setMsgs((m) => [...m, { who: "me", text: `${text || "(no message)"}${off !== undefined ? `  — offer ${usd(off)}` : ""}` }]);
@@ -47,11 +63,12 @@ export function Arena() {
             {msgs.map((m, i) => <div key={i} className={"msg " + m.who}>{m.text}</div>)}<div ref={chatEnd} />
           </div>
           <div className="row" style={{ marginTop: 8 }}>
-            <div style={{ flex: "0 0 130px" }}><label htmlFor="off">Offer ($)</label><input id="off" inputMode="decimal" value={offer} onChange={(e) => setOffer(e.target.value)} placeholder="e.g. 18.00" /></div>
+            <div style={{ flex: "0 0 130px" }}><label htmlFor="off">Offer ($)</label><input id="off" inputMode="decimal" value={offer} onChange={(e) => setOffer(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="e.g. 18.00" /></div>
             <div><label htmlFor="txt">Message</label><input id="txt" value={text} maxLength={600} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Say something to the shopkeeper…" /></div>
-            <button className="btn" onClick={send} disabled={busy || !item} style={{ alignSelf: "flex-end" }}>{busy ? "…" : "Send"}</button>
+            <button className="btn" onClick={send} disabled={busy} aria-busy={busy || (queued && !item)} style={{ alignSelf: "flex-end" }}>{busy ? "…" : queued && !item ? "Waiting…" : "Send"}</button>
           </div>
           {err && <p className="err" role="alert">{err}</p>}
+          {catErr && <p className="err" role="alert">{catErr} <button className="btn ghost" onClick={() => setTries((n) => n + 1)}>Retry</button></p>}
         </div>
         <aside className="card black" aria-label="Live decision trace">
           <h2>Live trace</h2>
