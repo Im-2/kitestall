@@ -274,3 +274,13 @@ describe("Shadow Agent gating (demo shopper only, accept/final candidates only)"
     expect(t.tools[0]).not.toContain("serv_shadow_agent"); expect(t.tools[1]).toContain("serv_shadow_agent"); expect(t.tools[1]).toContain("serv_prompt_guard");
   });
 });
+
+describe("firm-quote fee survives a cold start via docs/history.json", () => {
+  it("re-imports the real fee as COLLECTED, idempotently", async () => {
+    const db = openDb(":memory:"); const f = fileURLToPath(new URL("../../../docs/history.json", import.meta.url)); seed(db, env, f);
+    importHistory(db, f); importHistory(db, f);
+    const app = createApp({ db, env, facilitator: fac, serv: { baseUrl: "", apiKey: "", model: "m", mode: "fallback_only" } });
+    const s = await (await app.request("/api/stats")).json(); expect(s.firm_quotes_sold).toBe(1); expect(s.fees_collected_cents).toBe(5);
+    const led = await (await app.request("/owner/ledger", { headers: { authorization: "Bearer tok" } })).json(); expect(led.firm_quotes[0].tx_hash).toMatch(/^0xd1faccba/);
+  });
+});

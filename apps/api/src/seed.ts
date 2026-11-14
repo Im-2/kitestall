@@ -40,7 +40,7 @@ export function seed(db: DB, env: NodeJS.ProcessEnv = process.env, historyFile?:
 function importPolicies(db: DB, h: History) {
   for (const p of h.policies) run(db, "INSERT OR IGNORE INTO policies(shop_id,version,hash,public_json,private_json,created_at,active) VALUES(?,?,?,?,?,?,0)", p.shop_id, p.version, p.hash, p.public_json, "{}", p.created_at);
 }
-interface History { policies: { shop_id: string; version: number; hash: string; public_json: string; created_at: string }[]; sales: any[] }
+interface History { firm_quotes?: any[]; policies: { shop_id: string; version: number; hash: string; public_json: string; created_at: string }[]; sales: any[] }
 
 /** Re-imports REAL settled sales (verbatim rows exported by scripts/export-history.ts). Idempotent: an order already present is skipped. Nothing is altered. */
 export function importHistory(db: DB, file: string): { imported: number; skipped: number } {
@@ -61,6 +61,12 @@ export function importHistory(db: DB, file: string): { imported: number; skipped
       imported++;
     }
   });
+  // paid firm-quote fees (REAL on-chain testnet payments): ledger row (collected) + payment row, verbatim from the signed quote document
+  for (const f of h.firm_quotes ?? []) {
+    const q = f.firm_quote; if (row(db, "SELECT 1 x FROM ledger_fees WHERE kind='firm_quote_fee' AND ref=?", q.firm_quote_id)) continue;
+    run(db, "INSERT INTO ledger_fees(shop_id,kind,ref,amount_cents,accrued_only,created_at) VALUES(?,?,?,?,0,?)", q.shop_id, "firm_quote_fee", q.firm_quote_id, q.fee.cents, q.issued_at);
+    run(db, "INSERT OR IGNORE INTO payments(quote_id,nonce,tx_hash,payer,amount_wei,status,signer_kind,created_at) VALUES(?,?,?,?,?,?,?,?)", q.firm_quote_id, null, q.fee.tx_hash, q.fee.payer, f.amount_wei, "settled", "firm_quote", q.issued_at);
+  }
   return { imported, skipped };
 }
 

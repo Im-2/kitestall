@@ -577,5 +577,42 @@
       }
     }
   ],
-  "merged_from_live_at": "2026-11-14T16:31:06.303Z"
+  "merged_from_live_at": "2026-11-14T16:31:06.303Z",
+  "firm_quotes": [
+    {
+      "firm_quote": {
+        "kind": "kitestall-firm-quote",
+        "testnet": true,
+        "firm_quote_id": "fq_4479baf0296f",
+        "quote_id": "fq_4479baf0296f",
+        "shop_id": "nomad",
+        "item": {
+          "id": "day-pass",
+          "qty": 1
+        },
+        "list_price_cents": 2500,
+        "unit_price_cents": 2125,
+        "total_cents": 2125,
+        "valid_until": "2026-11-14T18:06:26.966Z",
+        "policy": {
+          "version": 3,
+          "hash": "sha256:08b797258d8f05fe12416cd3765f13ae639ed12f9f1d3a6ba23d10a9f7b2c63d"
+        },
+        "rules_fired": [
+          "R-FIRM-QUOTE"
+        ],
+        "fee": {
+          "cents": 5,
+          "network": "kite-testnet",
+          "tx_hash": "0xd1faccba34275dc8aa107b9592f05ac45a1dcc37f5889e329a881ab4b041da77",
+          "payer": "0xA03C4b33c55da051f0D4dBFA12fF05Ddb227a29f",
+          "pay_to": "0x9E6219F8EEe17742838567F44e18875cCD41Cb39",
+          "settled_via": "self-relay"
+        },
+        "issued_at": "2026-11-14T17:56:26.970Z",
+        "signature": "ed25519:Ju4mCksef-_53fBy4o0Bn4NdwANxuV67NnVaiFCPCn_1SdhY33LerEBSBybb3zjFBRpa7MGakR024vT1CCPLDg"
+      },
+      "amount_wei": "50000000000000000"
+    }
+  ]
 }

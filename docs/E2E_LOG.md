@@ -85,3 +85,13 @@
 - Purchase explorer: https://testnet.kitescan.ai/tx/0x4ca2fd77197c03a2049073878f533035c8ec8903e1f4b2eecf6f8181cfe7fcc7
 - Verify: signature ✓, rules_in_public_policy ✓, price_bounds ✓, policy_hash ✓, payment_tx_onchain ✓, amount_matches_price ✓
 
+## 2026-11-14T17:55:59.242Z — PAID FIRM QUOTE (x402 micro-fee, fee only, no purchase) — nomad/day-pass — FEE SETTLED
+
+- Base URL: https://kitestall.onrender.com
+- Signer: dev signer (testnet EOA, no Passport session)
+- Firm quote: fq_4479baf0296f, unit price 2125c (list 2500c), valid until 2026-11-14T18:06:26.966Z, rules R-FIRM-QUOTE
+- **Fee**: 5c paid to the platform wallet 0x9E6219F8EEe17742838567F44e18875cCD41Cb39, settled via self-relay
+- Fee tx: 0xd1faccba34275dc8aa107b9592f05ac45a1dcc37f5889e329a881ab4b041da77
+- Fee explorer: https://testnet.kitescan.ai/tx/0xd1faccba34275dc8aa107b9592f05ac45a1dcc37f5889e329a881ab4b041da77
+- Signed firm quote saved: docs/evidence/firm-quote-fq_4479baf0296f.json
+
