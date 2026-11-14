@@ -1,14 +1,14 @@
 # Multi-stage: build web, then run API (tsx) serving the static web build.
 FROM node:24-bookworm-slim AS build
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
-RUN corepack enable
+RUN npm i -g pnpm@12.15.0
 WORKDIR /app
 COPY . .
-RUN pnpm install --frozen-lockfile=false
+RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @kitestall/web build
 
 FROM node:24-bookworm-slim
-RUN corepack enable
+RUN npm i -g pnpm@12.15.0
 ENV NODE_ENV=production PORT=8787 DATABASE_PATH=/data/kitestall.db
 WORKDIR /app
 COPY --from=build /app /app

@@ -8,10 +8,19 @@
     "node": ">=20"
   },
   "scripts": {
+    "check": "pnpm -r --if-present typecheck && pnpm --filter @kitestall/core test && pnpm --filter @kitestall/api test",
+    "seed": "echo Seeding is idempotent and runs automatically on API start (apps/api/src/seed.ts)",
+    "dev": "pnpm --filter @kitestall/api dev",
+    "build": "pnpm --filter @kitestall/web build",
+    "start": "pnpm --filter @kitestall/api start",
+    "adversarial": "tsx scripts/adversarial.ts",
+    "bench": "tsx scripts/bench.ts",
+    "e2e:kite": "tsx scripts/e2e-kite.ts",
+    "demo:reset": "tsx scripts/demo-reset.ts",
+    "verify-receipt": "node scripts/verify-receipt.mjs",
     "smoke:serv": "node scripts/smoke-serv.mjs",
     "smoke:kite": "node scripts/smoke-kite.mjs",
-    "smoke:facilitator": "node scripts/smoke-facilitator.mjs",
-    "smoke": "node scripts/smoke-serv.mjs && node scripts/smoke-kite.mjs && node scripts/smoke-facilitator.mjs"
+    "smoke:facilitator": "node scripts/smoke-facilitator.mjs"
   },
   "dependencies": {
     "viem": "^2.57.19"

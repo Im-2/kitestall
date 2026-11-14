@@ -48,3 +48,14 @@
 - Explorer: https://testnet.kitescan.ai/tx/0xe09c50f624f8f808d9546bba7cc9fac83df3a9ccdcd7aae429f17a979a7f8c29
 - Verify: signature ✓, rules_in_public_policy ✓, price_bounds ✓, policy_hash ✓, payment_tx_onchain ✓, amount_matches_price ✓
 
+## 2026-11-14T13:04:32.992Z — scenario `plain` — brightbean/house-blend-1kg — SETTLED
+
+- Base URL: http://localhost:8787
+- Signer: dev signer (testnet EOA, no Passport session)
+- Rounds: 3; Prompt Guard blocks: 0; SERV statuses: live
+- Agreed unit price: 2889 cents (list 3200)
+- Receipt: rc_4af3cbe411a9; settled via: self-relay
+- Tx: 0xf8ddeba47a9555d267b5bf7b42cf5a0a825e1ca8301554ae9335981428fd7405
+- Explorer: https://testnet.kitescan.ai/tx/0xf8ddeba47a9555d267b5bf7b42cf5a0a825e1ca8301554ae9335981428fd7405
+- Verify: signature ✓, rules_in_public_policy ✓, price_bounds ✓, policy_hash ✓, payment_tx_onchain ✓, amount_matches_price ✓
+

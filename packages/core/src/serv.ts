@@ -35,7 +35,8 @@ export function estimateCostUsd(model: string, u: { prompt: number; completion: 
 }
 
 export function modelId(c: ServConfig): string {
-  return c.model + (c.kronos ? "-serv-kronos" : "") + (c.multipath ? "-serv-multipath" : "");
+  const f = [c.kronos ? "kronos" : "", c.multipath ? "multipath" : ""].filter(Boolean).join("-");
+  return f ? `${c.model}-serv-${f}` : c.model;
 }
 
 /** One SERV chat completion. Prompt Guard is ALWAYS on and is never retried without it. */

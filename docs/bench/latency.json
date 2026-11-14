@@ -1,0 +1,52 @@
+{
+  "generated_at": "2026-11-14T13:03:57.084Z",
+  "variants": [
+    {
+      "name": "guard + schema (baseline)",
+      "n": 8,
+      "p50": 2782,
+      "p95": 3396,
+      "mean_tokens": 826,
+      "mean_cost_usd": "0.00107"
+    },
+    {
+      "name": "+ multipath (blocked 2, errors 0)",
+      "n": 6,
+      "p50": 2809,
+      "p95": 3167,
+      "mean_tokens": 637,
+      "mean_cost_usd": "0.00093"
+    },
+    {
+      "name": "+ shadow agent",
+      "n": 8,
+      "p50": 5553,
+      "p95": 8348,
+      "mean_tokens": 830,
+      "mean_cost_usd": "0.00110"
+    },
+    {
+      "name": "+ multipath + shadow (blocked 1, errors 0)",
+      "n": 7,
+      "p50": 5561,
+      "p95": 6643,
+      "mean_tokens": 638,
+      "mean_cost_usd": "0.00094"
+    },
+    {
+      "name": "+ kronos + multipath (blocked 0, errors 8)",
+      "n": 0,
+      "p50": null,
+      "p95": null,
+      "mean_tokens": null,
+      "mean_cost_usd": null
+    }
+  ],
+  "production": {
+    "name": "gpt-5.4-mini-serv-multipath + prompt guard + schema",
+    "neg_n": 5,
+    "neg_p50": 6839,
+    "neg_p95": 7104,
+    "neg_mean_cost_usd": "0.00167"
+  }
+}
