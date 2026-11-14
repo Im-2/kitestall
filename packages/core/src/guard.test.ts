@@ -26,7 +26,7 @@ describe("Prompt Guard block handling", () => {
   it("the model is never told about R-FINAL-ACCEPT and never sees the floor", () => {
     for (const style of ["full", "lean", "lean-note"] as const) {
       const { system, user } = buildPrompts(withFinalRule(shop.policy.public), { shopName: "S", itemName: "x", listCents: 2500, askCents: 2500, offerCents: 2100, round: 1, maxRounds: 3, buyerMessage: "hi", qty: 1 }, style);
-      expect(system + user).not.toContain("R-FINAL-ACCEPT"); expect(system + user).not.toMatch(/\b2000\b|20\.00/); expect(system + user).not.toContain("salt");
+      expect(system + user).not.toContain("R-FINAL-ACCEPT"); expect(system + user).not.toContain("R-FIRM-QUOTE"); expect(system + user).not.toMatch(/\b2000\b|20\.00/); expect(system + user).not.toContain("salt");
     }
   });
   it("R-FINAL-ACCEPT cited by the model never appears from decide() before the final round", () => {
