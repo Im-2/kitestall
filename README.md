@@ -6,7 +6,7 @@ Most Kite agents are the *buyer's*. Kitestall is the *seller's*: a shop publishe
 
 > **Everything here is Kite TESTNET.** No real money. Fees are accrued in a ledger, not collected. OpenServ SERV Hackathon Edition 02, **Track 02: Kite**.
 
-- Repo: https://github.com/Im-2/kitestall · Live demo: `<DEPLOY_URL>` (fill in after the Render deploy)
+- Repo: https://github.com/Im-2/kitestall · Live demo: https://kitestall.onrender.com (Render free plan: first request after idle takes ~1 min to wake)
 - Proof it works: [docs/E2E_LOG.md](docs/E2E_LOG.md) (real testnet settlements, tx hashes, verify results) · [docs/BENCHMARKS.md](docs/BENCHMARKS.md) (generated: adversarial suite, latency, cost)
 
 ## Screenshots
@@ -50,7 +50,7 @@ Details and honest caveats in [docs/SERV_NOTES.md](docs/SERV_NOTES.md).
 
 ## How we use Kite
 - **x402**: `/checkout` returns a 402 whose `amount` is exactly the quote in wei (testnet **PYUSD**, 18 decimals, chain `eip155:2368`). The shopper signs an EIP-3009 `transferWithAuthorization`; the server checks payee/amount/asset/nonce, calls the **Pieverse facilitator** `/v2/verify`, then settles.
-- **Honest finding:** Pieverse `/v2/settle` returned `transaction_failed` for every PYUSD authorization we tried (details in [docs/DISCOVERY.md](docs/DISCOVERY.md)). So the server falls back to **self-relay**: it submits the signed `transferWithAuthorization` itself (gas paid by the relayer). Receipts record `settled_via`. All three recorded sales settled via self-relay.
+- **Honest finding:** Pieverse `/v2/settle` returned `transaction_failed` for every PYUSD authorization we tried (details in [docs/DISCOVERY.md](docs/DISCOVERY.md)). So the server falls back to **self-relay**: it submits the signed `transferWithAuthorization` itself (gas paid by the relayer). Receipts record `settled_via`. All four recorded sales settled via self-relay.
 - **Signer used: dev signer** (a funded testnet EOA). **No Kite Passport session was used**, so Passport enforcement is *not* claimed. Story A's "session limit" is a **simulated** per-transaction cap enforced by the dev signer, labeled as such in the UI and logs. The signer sits behind a `PaymentSigner` interface so a `kpass`/Passport signer can be plugged in.
 
 ## Security model
