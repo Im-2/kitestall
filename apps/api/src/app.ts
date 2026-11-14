@@ -171,7 +171,7 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
       quote = { quote_id: qid, unit_price_cents: r.askCents, total_cents: total, qty: b.qty, expires_at: new Date(Date.now() + ttl * 1000).toISOString(), testnet: true };
     }
     return c.json({ session_id: sid, round, status, ask_cents: r.askCents, quote, message: r.message, rules_fired: r.rulesFired, final: r.final,
-      serv: { status: r.servStatus, guard: r.guard, model: r.serv?.model ?? null, features: r.serv?.features ?? [], request_id: r.serv?.requestId ?? null, latency_ms: r.serv?.latencyMs ?? null, budget_capped: killSwitch, ...(killSwitch ? { note: `SERV not called (${capReason}); decided by the deterministic fallback engine` } : {}) }, testnet: true });
+      serv: { status: r.servStatus, guard: r.guard, model: r.serv?.model ?? null, features: r.serv?.features ?? [], request_id: r.serv?.requestId ?? null, latency_ms: r.serv?.latencyMs ?? null, budget_capped: killSwitch, flagged: r.guard === "blocked", ...(killSwitch ? { note: `SERV not called (${capReason}); decided by the deterministic fallback engine` } : {}) }, testnet: true });
   });
 
   app.get("/api/trace/:session/stream", (c) => streamSSE(c, async (s) => {
