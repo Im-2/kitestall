@@ -4,3 +4,4 @@
 - 2026-11-14 D3: Testnet asset PYUSD (18 decimals) at 0x8E04…2ec9 replaces spec's "Test USDT"; chain 2368; explorer testnet.kitescan.ai. Reason: current Kite docs.
 - 2026-11-14 D4: Facilitator = Pieverse (https://facilitator.pieverse.io). Reason: Kite docs recommend it; confirmed live.
 - 2026-11-14 D5: Internal 1 token == $1 assumption kept; 1 cent = 10^16 wei.
+- 2026-11-14 D6: Prompt Guard block detection = finish_reason content_filter OR null content OR zero usage (see DISCOVERY). Treat ambiguous as blocked (fail closed).
