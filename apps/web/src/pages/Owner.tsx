@@ -66,7 +66,7 @@ export function Owner() {
           {!ledger ? <p className="empty">Ledger unavailable (check the token).</p> : <>
             <p className="sm">{ledger.note}</p>
             <p>Fees accrued: {ledger.fees.length ? ledger.fees.map((f: any) => <span className="chip" key={f.kind}>{f.kind}: {usd(f.cents)} ({f.n})</span>) : <span className="empty">none yet</span>}</p>
-            {ledger.needs_reconcile.length > 0 && <p className="err">Needs reconcile: {ledger.needs_reconcile.length} payment(s) — settled or unknown on-chain without fulfilment.</p>}
+            {ledger.needs_reconcile.length > 0 ? <p className="err" role="alert">Needs reconcile: {ledger.needs_reconcile.length} payment(s) settled or unknown on-chain without fulfilment.</p> : <p className="sm">Needs reconcile: <b>none</b> (every verified payment has an order).</p>}
             {ledger.sales.length === 0 ? <p className="empty">No settled sales yet.</p> : <div className="tablewrap"><table><thead><tr><th>When</th><th>Shop</th><th>Item</th><th>Total</th><th>Tx</th><th>Receipt</th></tr></thead><tbody>{ledger.sales.map((s: any) => <tr key={s.order_id}><td>{new Date(s.created_at).toLocaleString()}</td><td>{s.shop_id}</td><td>{s.item_id} ×{s.qty}</td><td>{usd(s.total_cents)}</td><td><a href={`${EXPLORER}/tx/${s.tx_hash}`} target="_blank" rel="noreferrer" className="mono">{short(s.tx_hash)}</a></td><td><a href={`#/verify?id=${s.receipt_id}`}>verify</a></td></tr>)}</tbody></table></div>}
           </>}
         </section>

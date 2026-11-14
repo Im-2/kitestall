@@ -57,7 +57,7 @@ export function LiveDashboard({ compact = false }: { compact?: boolean }) {
   const fees = a.fees.find((f) => f.kind === "platform_fee"), qfees = a.fees.find((f) => f.kind === "quote_fee");
   return (
     <div className={"dash" + (compact ? " compact" : "")} aria-label="Live Kitestall dashboard">
-      <h4><span>Kitestall live</span><span className="badge">Testnet</span></h4>
+      <div className="dh"><span>Kitestall live</span><span className="badge">Testnet</span></div>
       <div className="row2">
         <div className="kpi o"><div className="v">{usd(s.volume_cents)}</div><div className="l">Settled volume</div></div>
         <div className="kpi"><div className="v">{s.settled_sales}</div><div className="l">Settled sales</div></div>
@@ -68,14 +68,14 @@ export function LiveDashboard({ compact = false }: { compact?: boolean }) {
       </div>
       <div className="two">
         <div>
-          <h4>Sales ledger</h4>
+          <div className="dh">Sales ledger</div>
           {a.sales.length === 0 ? <p className="empty">No settled sales yet.</p> : (
             <table><thead><tr><th>Item</th><th>Total</th>{!compact && <th>Tx</th>}</tr></thead>
               <tbody>{a.sales.slice(0, compact ? 3 : 5).map((x) => <tr key={x.order_id}><td>{x.shop_id}/{x.item_id}</td><td>{usd(x.total_cents)}</td>{!compact && <td className="mono">{short(x.tx_hash)}</td>}</tr>)}</tbody></table>
           )}
         </div>
         {!compact || true ? <div>
-          <h4>Recent negotiations</h4>
+          <div className="dh">Recent negotiations</div>
           {a.rounds.length === 0 ? <p className="empty">No rounds yet.</p> : (
             <table><thead><tr><th>Rd</th><th>Status</th><th>Ask</th></tr></thead>
               <tbody>{a.rounds.slice(0, compact ? 3 : 5).map((r, i) => <tr key={i}><td>{r.round}</td><td>{r.guard === "blocked" ? "blocked" : r.status}</td><td>{usd(r.ask_cents)}</td></tr>)}</tbody></table>

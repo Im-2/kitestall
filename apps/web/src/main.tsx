@@ -1,3 +1,5 @@
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/600.css";
 import { StrictMode, Suspense, lazy, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
@@ -19,7 +21,7 @@ function useRoute() {
 
 function App() {
   const r = useRoute();
-  useEffect(() => { initScroll(); }, []);
+  useEffect(() => { const ric = (window as any).requestIdleCallback as undefined | ((f: () => void) => void); if (ric) ric(initScroll); else setTimeout(initScroll, 300); }, []);
   const route = ["arena", "watch", "owner", "verify"].includes(r) ? r : "home";
   return (
     <Shell route={route}>

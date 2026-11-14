@@ -24,3 +24,9 @@ Language taken from the supplied reference recording (light geometric landing te
 
 ## Data rule
 All figures come from `GET /api/stats` and `GET /api/public/activity` (new read-only, redacted). Empty database ⇒ zeros and "No … yet" states. Fees are labelled "accrued", money carries a TESTNET badge, SERV status shows live/fallback honestly.
+
+## Verification (2026-11-14, local server, real data)
+- `node scripts/ui-smoke.mjs` (real Chrome): landing, Arena haggle with live trace, Verify (6 ticks), Owner unlock + ledger with Kitescan links, Watch with a real settled testnet purchase: all PASS, no page errors.
+- Lighthouse 12 on the landing page (`npx lighthouse`, headless Chrome, simulated throttling on mobile): **desktop** performance 100, accessibility 100, best-practices 100, SEO 92; **mobile** performance **88**, accessibility 100, best-practices 100, SEO 92 (LCP 2.6 s, CLS 0, TBT 330 ms). Mobile performance is below the 90 target: remaining cost is GSAP/ScrollTrigger/Lenis + React parse time on a 4x-throttled CPU. Measured against localhost, so network time is optimistic.
+- No horizontal overflow at 390 px or 1440 px on any page (`scripts/screenshots.mjs`). Screenshots: `docs/screenshots/`.
+- `prefers-reduced-motion`: Lenis, reveals, parallax, marquee and count-ups are skipped and content is visible immediately.

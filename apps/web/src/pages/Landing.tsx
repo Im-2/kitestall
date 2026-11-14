@@ -27,8 +27,8 @@ export function Landing() {
         ]} />
         <span id="h1" className="sr">Kitestall: a storefront agent that haggles within your rules and shows its work.</span>
         <div className="hero-sub">
-          <p className="lead" data-reveal>Most Kite agents are the buyer's. Kitestall is the seller's: it negotiates with shopper agents, puts the agreed price inside an x402 payment, and issues a signed receipt that lists which public rules produced it. <b>All on Kite testnet.</b></p>
-          <div className="actions" data-reveal><a className="btn grey" href="#/watch">Watch a shopper buy</a><a className="btn primary" href="#/arena">Haggle in the Arena</a></div>
+          <p className="lead">Most Kite agents are the buyer's. Kitestall is the seller's: it negotiates with shopper agents, puts the agreed price inside an x402 payment, and issues a signed receipt that lists which public rules produced it. <b>All on Kite testnet.</b></p>
+          <div className="actions"><a className="btn grey" href="#/watch">Watch a shopper buy</a><a className="btn primary" href="#/arena">Haggle in the Arena</a></div>
         </div>
       </section>
 
@@ -134,9 +134,9 @@ export function Landing() {
       <section className="sheet" aria-label="Built on Kite and OpenServ SERV">
         <div className="eyebrow" style={{ textAlign: "center" }}>Built on</div>
         <div className="partners">
-          <span className="partner"><img src="/kite-logo.png" alt="Kite" width="48" height="48" loading="lazy" />Kite</span>
+          <span className="partner"><img src="/kite-logo-96.png" alt="Kite" width="48" height="48" loading="lazy" />Kite</span>
           <span className="x" aria-hidden="true">×</span>
-          <span className="partner dark-chip"><img src="/openserv-logo-white.png" alt="OpenServ" width="48" height="48" loading="lazy" />OpenServ SERV</span>
+          <span className="partner dark-chip"><img src="/openserv-logo-white-96.png" alt="OpenServ" width="48" height="48" loading="lazy" />OpenServ SERV</span>
         </div>
         <p className="sm" style={{ textAlign: "center" }}>Kite testnet for x402 payments · SERV Reasoning for Prompt Guard, structured decisions and Multipath</p>
       </section>

@@ -1,5 +1,6 @@
 import { Hono, type Context } from "hono";
 import { streamSSE } from "hono/streaming";
+import { compress } from "hono/compress";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { z } from "zod";
 import { randomBytes, randomUUID, createHash } from "node:crypto";
@@ -64,6 +65,8 @@ export function createApp(d: Deps) {
   const baseUrl = () => env.PUBLIC_BASE_URL || `http://localhost:${env.PORT ?? 8787}`;
   const ip = (c: Context) => (c.req.header("x-forwarded-for") ?? "local").split(",")[0]!.trim();
 
+  const gz = compress();
+  app.use("*", async (c, next) => (c.req.path.startsWith("/api/trace") || c.req.path.startsWith("/api/demo-shopper") ? next() : gz(c, next))); // gzip everything except SSE streams
   app.use("*", async (c, next) => { // public rate limit
     if (!c.req.path.startsWith("/assets") && limited(`ip:${ip(c)}`, 240, 60_000)) return err(c, 429, "rate_limited", "Too many requests");
     await next();
@@ -374,6 +377,7 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
 
   // ---------- static web ----------
   if (d.staticDir) {
+    app.use("*", async (c, next) => { await next(); const p = c.req.path; if (c.res.status === 200) { if (p.startsWith("/assets/")) c.header("cache-control", "public, max-age=31536000, immutable"); else if (/.(png|svg|ico|woff2?)$/.test(p)) c.header("cache-control", "public, max-age=86400"); } });
     app.use("*", serveStatic({ root: d.staticDir })); // real files (assets, logos, favicon); unknown paths fall through to the SPA index below
     app.get("*", async (c, next) => { if (/^\/(shops|api|owner|receipts|orders|healthz|\.well-known|llms)/.test(c.req.path)) return next(); return serveStatic({ root: d.staticDir, path: "index.html" })(c, next); });
   }

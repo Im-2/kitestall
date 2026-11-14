@@ -9,6 +9,13 @@ Most Kite agents are the *buyer's*. Kitestall is the *seller's*: a shop publishe
 - Repo: https://github.com/Im-2/kitestall · Live demo: `<DEPLOY_URL>` (fill in after the Render deploy)
 - Proof it works: [docs/E2E_LOG.md](docs/E2E_LOG.md) (real testnet settlements, tx hashes, verify results) · [docs/BENCHMARKS.md](docs/BENCHMARKS.md) (generated: adversarial suite, latency, cost)
 
+## Screenshots
+| Landing (desktop) | Landing (mobile) |
+|---|---|
+| ![Landing desktop](docs/screenshots/landing-desktop.png) | ![Landing mobile](docs/screenshots/landing-mobile.png) |
+
+Arena, Watch, Owner dashboard and Verify: `docs/screenshots/` (desktop + mobile). Every number on the site comes from the live database.
+
 ## 60-second quickstart
 ```bash
 pnpm install

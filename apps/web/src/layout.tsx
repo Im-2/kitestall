@@ -11,7 +11,7 @@ export function SiteHeader({ route }: { route: string }) {
   return (
     <header className="hdr page">
       <div className="hdr-bar">
-        <a className="brand" href="#/home" aria-label="Kitestall home"><img src="/kite-logo.png" alt="" width="30" height="30" />Kitestall</a>
+        <a className="brand" href="#/home" aria-label="Kitestall home"><img src="/kite-logo-96.png" alt="" width="30" height="30" />Kitestall</a>
         <nav className={"nav" + (open ? " open" : "")} aria-label="Main">
           {NAV.map(([to, label]) => <a key={to} href={`#/${to}`} className={route === to || (to === "home" && route === "home") ? "on" : ""} aria-current={route === to ? "page" : undefined}>{label}</a>)}
         </nav>
