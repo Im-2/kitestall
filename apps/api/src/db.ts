@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS receipts(id TEXT PRIMARY KEY, order_id TEXT, shop_id 
 CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY AUTOINCREMENT, quote_id TEXT, nonce TEXT UNIQUE, tx_hash TEXT UNIQUE, payer TEXT, amount_wei TEXT, status TEXT, detail TEXT, signer_kind TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, shop_id TEXT, session_id TEXT, detail TEXT, created_at TEXT);
 CREATE TABLE IF NOT EXISTS ledger_fees(id INTEGER PRIMARY KEY AUTOINCREMENT, shop_id TEXT, kind TEXT, ref TEXT, amount_cents INTEGER, accrued_only INTEGER DEFAULT 1, created_at TEXT);
+CREATE TABLE IF NOT EXISTS serv_spend(id INTEGER PRIMARY KEY AUTOINCREMENT, day TEXT, kind TEXT, usd REAL, created_at TEXT);
+CREATE INDEX IF NOT EXISTS idx_spend_day ON serv_spend(day);
 CREATE INDEX IF NOT EXISTS idx_rounds_session ON rounds(session_id);
 CREATE INDEX IF NOT EXISTS idx_events_kind ON events(kind);
 `;

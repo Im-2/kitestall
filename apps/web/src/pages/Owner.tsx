@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, usd, EXPLORER, short } from "../lib";
+import { useLive } from "../live";
 
 const TOKEN_KEY = "kitestall_owner_token";
 const SAMPLE = "We run a small bakery. Sourdough loaves list at $9. Give 10% off when someone buys 4 or more. Regulars get an extra 5%. Never go more than 25% off list and never below 78% of list. Up to 3 rounds. Be friendly.";
@@ -9,6 +10,7 @@ export function Owner() {
   const [shops, setShops] = useState<any[]>([]); const [shop, setShop] = useState("nomad"); const [english, setEnglish] = useState(SAMPLE);
   const [compiled, setCompiled] = useState<any>(null); const [preview, setPreview] = useState<any>(null); const [msg, setMsg] = useState(""); const [busy, setBusy] = useState("");
   const [ledger, setLedger] = useState<any>(null); const [negs, setNegs] = useState<any[]>([]);
+  const { stats } = useLive(); const bud = stats?.serv_budget;
   const [nw, setNw] = useState({ id: "", name: "", wallet: "", item: "", price: "", stock: "10" });
   const H = { "content-type": "application/json", authorization: `Bearer ${token}` };
   const save = (t: string) => { setToken(t); try { sessionStorage.setItem(TOKEN_KEY, t); } catch { /* ignore */ } };
@@ -60,6 +62,18 @@ export function Owner() {
           <label htmlFor="n3">Payout wallet (Kite testnet 0x…)</label><input id="n3" value={nw.wallet} onChange={(e) => setNw({ ...nw, wallet: e.target.value })} className="mono" />
           <div className="row"><div><label htmlFor="n4">First item</label><input id="n4" value={nw.item} onChange={(e) => setNw({ ...nw, item: e.target.value })} /></div><div><label htmlFor="n5">List price ($)</label><input id="n5" inputMode="decimal" value={nw.price} onChange={(e) => setNw({ ...nw, price: e.target.value })} /></div><div><label htmlFor="n6">Stock</label><input id="n6" inputMode="numeric" value={nw.stock} onChange={(e) => setNw({ ...nw, stock: e.target.value })} /></div></div>
           <p><button className="btn ghost" onClick={createShop} disabled={!!busy}>Create shop</button></p>
+        </section>
+        <section className="card black" style={{ marginTop: 16 }}>
+          <h2>SERV budget <span className="badge warn">estimated</span></h2>
+          {!bud ? <p className="empty">Loading…</p> : <>
+            <div className="stat-grid">
+              <div className="kpi"><div className="v">${bud.daily_spent_usd.toFixed(3)}</div><div className="l">Spent today (of ${bud.daily_cap_usd.toFixed(2)})</div></div>
+              <div className="kpi"><div className="v">${bud.daily_remaining_usd.toFixed(3)}</div><div className="l">Left today</div></div>
+              <div className="kpi"><div className="v">${bud.total_spent_usd.toFixed(3)}</div><div className="l">Spent in total (of ${bud.total_cap_usd.toFixed(2)})</div></div>
+              <div className="kpi"><div className="v">${bud.total_remaining_usd.toFixed(3)}</div><div className="l">Left in total</div></div>
+            </div>
+            <p className="sm" style={{ marginTop: 12 }}>{bud.method}. {bud.capped ? <b>Cap reached: the shop is using the deterministic fallback.</b> : "Under the cap: SERV is deciding rounds."}</p>
+          </>}
         </section>
         <section className="card" style={{ marginTop: 16 }}>
           <h2>Sales ledger <span className="badge">testnet</span></h2>

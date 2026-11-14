@@ -5,6 +5,7 @@ import { Spark, Bars, CountUp } from "./ui";
 export interface Stats {
   testnet: boolean; negotiations: number; rounds: number; blocked_attacks: number; fallback_rounds: number; quotes: number; settled_sales: number;
   volume_cents: number; avg_discount_pct: number | null; fees_accrued_cents: number; serv_latency_p50_ms: number | null; serv_live_rounds: number;
+  serv_budget?: { capped: boolean; reason: string | null; method: string; daily_spent_usd: number; daily_cap_usd: number; daily_remaining_usd: number; total_spent_usd: number; total_cap_usd: number; total_remaining_usd: number };
 }
 export interface Activity {
   sales: { order_id: string; receipt_id: string; shop_id: string; item_id: string; qty: number; total_cents: number; tx_hash: string; settled_via: string; created_at: string }[];
@@ -44,6 +45,7 @@ export function StatsStrip() {
         <span>Volume <b>{usd(s.volume_cents)}</b> <span className="badge">testnet</span></span>
         <span>Attacks blocked <b>{s.blocked_attacks}</b></span><span>Fees accrued <b>{usd(s.fees_accrued_cents)}</b></span>
         <span>SERV p50 <b>{fmtMs(s.serv_latency_p50_ms)}</b></span>
+        {s.serv_budget && <span title={s.serv_budget.method}>SERV budget left today <b>{usd(Math.round(s.serv_budget.daily_remaining_usd * 100))}</b> <span className="badge warn">est.</span></span>}
       </>}
     </div>
   );
@@ -84,6 +86,13 @@ export function LiveDashboard({ compact = false }: { compact?: boolean }) {
       </div>
     </div>
   );
+}
+
+/** Honest banner: shown whenever the SERV budget cap has switched the shop to the deterministic fallback engine. */
+export function BudgetBanner() {
+  const { stats: s } = useLive();
+  if (!s?.serv_budget?.capped) return null;
+  return <div className="banner" role="status"><b>SERV budget reached ({s.serv_budget.reason}).</b> Negotiations are being decided by the <b>deterministic fallback engine</b>, not SERV Reasoning, and are labeled that way. Prices, floors and receipts work exactly the same.</div>;
 }
 
 /** Small "latest settlement" tile for the hero. */

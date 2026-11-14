@@ -2,6 +2,8 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { servChat, DecisionSchemaJson, buildPrompts, estimateCostUsd, negotiateRound, SEED_SHOPS } from "../packages/core/src/index.ts";
 import { renderBenchmarks } from "./render-benchmarks.ts";
+import { requireLiveConsent } from "./_budget-guard.mjs";
+requireLiveConsent("latency bench (~55 live SERV calls)", 0.2);
 if (process.env.OPENSERV_API_KEY === undefined) process.loadEnvFile(".env");
 const base = { baseUrl: process.env.SERV_BASE_URL!, apiKey: process.env.OPENSERV_API_KEY!, model: "gpt-5.4-mini" };
 const shop = SEED_SHOPS[0]!; const N = 8;

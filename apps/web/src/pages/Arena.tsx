@@ -60,7 +60,7 @@ export function Arena() {
             <div><span className="k">Status</span> <span className={"badge " + (last.status === "accepted" ? "ok" : last.status === "rejected" ? "" : "blue")}>{last.status}</span></div>
             <div><span className="k">Ask</span> {usd(last.ask_cents)}</div>
             <div><span className="k">Prompt Guard</span> <span className={"badge " + (last.serv.guard === "blocked" ? "" : "ok")}>{last.serv.guard}</span></div>
-            <div><span className="k">Decided by</span> {last.serv.status === "live" ? <span className="badge ok">SERV live</span> : last.serv.status === "blocked" ? <span className="badge">guard blocked (no model call)</span> : <span className="badge warn">deterministic fallback</span>}</div>
+            <div><span className="k">Decided by</span> {last.serv.status === "live" ? <span className="badge ok">SERV live</span> : last.serv.status === "blocked" ? <span className="badge">guard blocked (no model call)</span> : <span className="badge warn" title={last.serv.note ?? "SERV did not decide this round"}>{last.serv.budget_capped ? "fallback: SERV budget reached" : "deterministic fallback"}</span>}</div>
             <div><span className="k">SERV</span> <span className="mono">{last.serv.model ?? "—"}</span> {last.serv.latency_ms ? `${last.serv.latency_ms} ms` : ""}</div>
             <div><span className="k">Rules fired</span><br />{last.rules_fired.map((r: string) => <span className="chip" key={r}>{r}</span>)}</div>
             {last.quote && <div><span className="k">Quote</span> <b>{usd(last.quote.unit_price_cents)}</b> · expires {new Date(last.quote.expires_at).toLocaleTimeString()}</div>}

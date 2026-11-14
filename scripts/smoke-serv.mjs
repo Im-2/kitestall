@@ -1,5 +1,7 @@
 // Phase 0 smoke test (a)+(b): SERV chat completion w/ system msg + strict JSON; Prompt Guard block vs pass.
 import { loadEnv } from "./_env.mjs";
+import { requireLiveConsent } from "./_budget-guard.mjs";
+requireLiveConsent("SERV smoke test (5 live calls)", 0.02);
 loadEnv();
 const BASE = process.env.SERV_BASE_URL || "https://inference-api.openserv.ai/v1";
 const KEY = process.env.OPENSERV_API_KEY;

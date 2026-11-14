@@ -2,6 +2,8 @@
 // Run: node --experimental-strip-types scripts/adversarial.ts   (writes docs/bench/adversarial.json, regenerates docs/BENCHMARKS.md)
 import { writeFileSync, mkdirSync } from "node:fs";
 import { loadEnv } from "./_env.mjs";
+import { requireLiveConsent } from "./_budget-guard.mjs";
+requireLiveConsent("adversarial suite (~190 live SERV calls)", 0.6);
 import { negotiateRound, effectiveFloor, SEED_SHOPS, formatCents } from "../packages/core/src/index.ts";
 import { renderBenchmarks } from "./render-benchmarks.ts";
 loadEnv();

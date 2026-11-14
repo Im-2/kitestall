@@ -12,6 +12,7 @@ import {
 } from "@kitestall/core";
 import { runShopper } from "@kitestall/shopper";
 import { now, row, rows, run, tx, type DB } from "./db.ts";
+import { budgetCfg, budgetState, chargeFor, initBudget, recordSpend } from "./budget.ts";
 
 export interface Deps {
   db: DB; serv: ServConfig; facilitator: Facilitator; env: NodeJS.ProcessEnv;
@@ -61,9 +62,11 @@ export function createApp(d: Deps) {
   const app = new Hono();
   const explorer = env.KITE_EXPLORER_BASE || KITE_TESTNET.explorer;
   const feeBpsV = Number(env.PLATFORM_FEE_BPS ?? 100), quoteFee = Number(env.QUOTE_FEE_CENTS ?? 1), freeQ = Number(env.FREE_QUOTES_PER_DAY ?? 10);
-  const budgetUsd = env.SERV_DAILY_BUDGET_USD ? Number(env.SERV_DAILY_BUDGET_USD) : Infinity;
+  const bcfg = budgetCfg(env); initBudget(db, bcfg);
+  const sessionCallCap = Number(env.SESSION_MAX_CALLS ?? 8), ipDailyCalls = Number(env.IP_DAILY_CALLS ?? 30), globalCallsPerMin = Number(env.GLOBAL_SERV_CALLS_PER_MIN ?? 25), demoRunsPerDay = Number(env.DEMO_RUNS_PER_DAY ?? 8);
   const baseUrl = () => env.PUBLIC_BASE_URL || `http://localhost:${env.PORT ?? 8787}`;
-  const ip = (c: Context) => (c.req.header("x-forwarded-for") ?? "local").split(",")[0]!.trim();
+  // behind Render's proxy the LAST x-forwarded-for entry is the one the proxy itself saw (the first can be client-supplied); no header = loopback (our own demo shopper)
+  const ip = (c: Context) => { const h = c.req.header("x-forwarded-for"); return h ? h.split(",").map((x) => x.trim()).filter(Boolean).at(-1) ?? "local" : "local"; };
 
   const gz = compress();
   app.use("*", async (c, next) => (c.req.path.startsWith("/api/trace") || c.req.path.startsWith("/api/demo-shopper") ? next() : gz(c, next))); // gzip everything except SSE streams
@@ -108,7 +111,6 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
   // ---------- negotiate ----------
   const NegZ = z.object({ session_id: z.string().max(80).optional(), item_id: z.string().max(80), qty: z.number().int().min(1).max(50).default(1), offer_cents: z.number().int().min(0).max(10_000_000).optional(), message: z.string().max(1000).optional(), payer: z.string().max(80).optional() });
   const day = () => new Date().toISOString().slice(0, 10);
-  const servSpentToday = () => row(db, "SELECT COALESCE(SUM(est_cost_usd),0) s FROM rounds WHERE created_at >= ?", day())?.s ?? 0;
 
   app.post("/shops/:shop/negotiate", async (c) => {
     if (limited(`neg:${ip(c)}`, 40, 60_000)) return err(c, 429, "rate_limited", "Slow down");
@@ -124,6 +126,10 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
     if (!sess) { run(db, "INSERT INTO sessions(id,shop_id,item_id,qty,ask_cents,round,status,buyer,ip,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)", sid, shopId, item.id, b.qty, item.list_cents, 0, "open", b.payer ?? null, ip(c), now()); sess = row(db, "SELECT * FROM sessions WHERE id=?", sid); }
     const recent = row(db, "SELECT COUNT(*) n FROM sessions WHERE item_id=? AND (ip=? OR buyer=?) AND created_at>=?", b.item_id, ip(c), b.payer ?? "-", new Date(Date.now() - 3600_000).toISOString())?.n ?? 0;
     if (ip(c) !== "local" && (!b.session_id || !row(db, "SELECT 1 x FROM rounds WHERE session_id=?", sid)) && recent > 8) return err(c, 429, "too_many_sessions", "Too many negotiation sessions for this item; try later");
+    // hard caps so strangers cannot drain SERV credits (a guard block does not consume a negotiation round, so total CALLS are capped separately)
+    const sessionCalls = row(db, "SELECT COUNT(*) n FROM rounds WHERE session_id=?", sid)?.n ?? 0;
+    if (sessionCalls >= sessionCallCap) { run(db, "UPDATE sessions SET status='rejected' WHERE id=?", sid); return err(c, 429, "session_call_cap", "This negotiation has used all of its allowed messages. Start a new session later."); }
+    if (ip(c) !== "local") { const ipCalls = row(db, "SELECT COUNT(*) n FROM rounds r JOIN sessions s ON s.id=r.session_id WHERE s.ip=? AND r.created_at>=?", ip(c), day())?.n ?? 0; if (ipCalls >= ipDailyCalls) return err(c, 429, "ip_daily_cap", "Daily message limit reached for your network. Try again tomorrow."); }
     const round = sess.round + 1;
     emitTrace(sid, { phase: "received", round });
     if (round > policy.public.max_rounds) {
@@ -133,12 +139,14 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
     const buyerKey = b.payer ?? ip(c);
     const used = row(db, "SELECT COUNT(*) n FROM rounds r JOIN sessions s ON s.id=r.session_id WHERE (s.buyer=? OR s.ip=?) AND r.created_at>=?", buyerKey, buyerKey, day())?.n ?? 0;
     if (used >= freeQ) run(db, "INSERT INTO ledger_fees(shop_id,kind,ref,amount_cents,created_at) VALUES(?,?,?,?,?)", shopId, "quote_fee", sid, quoteFee, now());
-    const killSwitch = servSpentToday() >= budgetUsd;
+    const bstate = budgetState(db, bcfg); const burst = limited("global-serv", globalCallsPerMin, 60_000);
+    const killSwitch = bstate.capped || burst; const capReason = bstate.reason ?? (burst ? "traffic burst protection" : null);
     emitTrace(sid, { phase: "guard", detail: "Prompt Guard screening buyer text" });
     const r = await negotiateRound({
       policy, shopName: shop.name, itemId: item.id, itemName: item.name, listCents: item.list_cents, qty: b.qty, stock: item.stock,
       currentAskCents: sess.ask_cents, offerCents: b.offer_cents ?? null, round, buyerMessage: b.message, serv: killSwitch ? { ...d.serv, mode: "fallback_only" } : d.serv,
     });
+    if (!killSwitch) recordSpend(db, "negotiate", chargeFor(r.serv, bcfg)); // estimated spend persists in the DB
     emitTrace(sid, { phase: "decision", guard: r.guard, concession: r.concession, action: r.action, status: r.status, ask_cents: r.askCents, rules: r.rulesFired, serv_status: r.servStatus });
     run(db, "INSERT INTO rounds(session_id,shop_id,round,buyer_message,offer_cents,status,ask_cents,message,rules_json,guard,serv_status,concession,action,serv_json,est_cost_usd,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
       sid, shopId, round, (b.message ?? "").slice(0, 600), b.offer_cents ?? null, r.status, r.askCents, r.message, JSON.stringify(r.rulesFired), r.guard, r.servStatus, r.concession, r.action, JSON.stringify(r.serv), r.serv?.estCostUsd ?? 0, now());
@@ -154,7 +162,7 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
       quote = { quote_id: qid, unit_price_cents: r.askCents, total_cents: total, qty: b.qty, expires_at: new Date(Date.now() + ttl * 1000).toISOString(), testnet: true };
     }
     return c.json({ session_id: sid, round, status, ask_cents: r.askCents, quote, message: r.message, rules_fired: r.rulesFired, final: r.final,
-      serv: { status: r.servStatus, guard: r.guard, model: r.serv?.model ?? null, features: r.serv?.features ?? [], request_id: r.serv?.requestId ?? null, latency_ms: r.serv?.latencyMs ?? null }, testnet: true });
+      serv: { status: r.servStatus, guard: r.guard, model: r.serv?.model ?? null, features: r.serv?.features ?? [], request_id: r.serv?.requestId ?? null, latency_ms: r.serv?.latencyMs ?? null, budget_capped: killSwitch, ...(killSwitch ? { note: `SERV not called (${capReason}); decided by the deterministic fallback engine` } : {}) }, testnet: true });
   });
 
   app.get("/api/trace/:session/stream", (c) => streamSSE(c, async (s) => {
@@ -272,7 +280,7 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
       testnet: true, negotiations: n("SELECT COUNT(*) n FROM sessions"), rounds: n("SELECT COUNT(*) n FROM rounds"), blocked_attacks: n("SELECT COUNT(*) n FROM events WHERE kind='attack'"),
       fallback_rounds: n("SELECT COUNT(*) n FROM events WHERE kind='fallback'"), quotes: n("SELECT COUNT(*) n FROM quotes"), settled_sales: n("SELECT COUNT(*) n FROM orders"),
       volume_cents: n("SELECT COALESCE(SUM(total_cents),0) n FROM orders"), avg_discount_pct: disc == null ? null : Math.round(disc * 10) / 10,
-      fees_accrued_cents: n("SELECT COALESCE(SUM(amount_cents),0) n FROM ledger_fees"), serv_latency_p50_ms: lat.length ? lat[Math.floor(lat.length / 2)] : null, serv_live_rounds: lat.length,
+      fees_accrued_cents: n("SELECT COALESCE(SUM(amount_cents),0) n FROM ledger_fees"), serv_latency_p50_ms: lat.length ? lat[Math.floor(lat.length / 2)] : null, serv_live_rounds: lat.length, serv_budget: budgetState(db, bcfg),
     });
   });
   // Read-only public activity feed for the landing-page dashboard (redacted: no buyer text, no policy internals). Added for the UI redesign; existing endpoints are unchanged.
@@ -293,7 +301,9 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
   app.get("/api/demo-shopper/stream", (c) => {
     const pk = env.DEMO_SHOPPER_PRIVATE_KEY; const shopId = c.req.query("shop") ?? "nomad"; const scenario = c.req.query("scenario") ?? "story-a";
     return streamSSE(c, async (s) => {
+      if ((row(db, "SELECT COUNT(*) n FROM events WHERE kind='demo_run' AND created_at>=?", day())?.n ?? 0) >= demoRunsPerDay) { await s.writeSSE({ data: JSON.stringify({ type: "error", message: `Daily demo-shopper limit reached (${demoRunsPerDay} runs/day, to protect the SERV budget)` }) }); return; }
       if (limited(`demo:${ip(c)}`, 3, 300_000)) { await s.writeSSE({ data: JSON.stringify({ type: "error", message: "Demo shopper is rate limited (3 runs / 5 min)" }) }); return; }
+      run(db, "INSERT INTO events(kind,shop_id,session_id,detail,created_at) VALUES('demo_run',NULL,NULL,'{}',?)", now());
       if (!pk) { await s.writeSSE({ data: JSON.stringify({ type: "error", message: "Demo shopper wallet not configured on this server" }) }); return; }
       const sh = shopRow(shopId); const item = sh ? rows(db, "SELECT * FROM items WHERE shop_id=?", shopId)[0] : null;
       if (!sh || !item) { await s.writeSSE({ data: JSON.stringify({ type: "error", message: "unknown shop" }) }); return; }
@@ -342,7 +352,9 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
   });
   app.post("/owner/policy/compile", async (c) => {
     const b = await c.req.json().catch(() => null); const english = b?.english; if (typeof english !== "string" || english.length < 20) return err(c, 400, "bad_request", "english policy text required");
+    const bs = budgetState(db, bcfg); if (bs.capped) return c.json({ ok: false, error: `SERV budget reached (${bs.reason}); policy compile is unavailable right now.` }, 429);
     const res = await compilePolicy(d.serv, english);
+    recordSpend(db, "compile", chargeFor({ estCostUsd: estimateCostUsd(res.call.model.replace(/-serv-.*/, ""), res.call.usage), tokens: res.call.usage.total }, bcfg));
     if (!res.ok) return c.json({ ok: false, error: res.error, raw: (res as any).raw ?? null }, 422);
     const z2 = DraftZ.safeParse(res.draft); if (!z2.success) return c.json({ ok: false, error: "Draft failed validation", issues: z2.error.issues, raw: res.draft }, 422);
     const spec = draftToSpec("preview", 1, z2.data); if (!spec.ok) return c.json({ ok: false, error: "Draft failed policy validation", issues: spec.errors, raw: res.draft }, 422);

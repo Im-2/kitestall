@@ -15,6 +15,16 @@ services:
       - { key: SERV_MODEL_NEGOTIATE, value: gpt-5.4-mini }
       - { key: SERV_MODEL_COMPILE, value: gpt-5.4-mini }
       - { key: SERV_MODE, value: live }
+      - { key: SERV_SHADOW, value: "0" }   # Shadow Agent stays OFF; Prompt Guard is always on
+      # HARD SERV budget ($2 topped up, no more). Estimated spend is persisted in SQLite; over a cap the shop uses the labeled deterministic fallback.
+      - { key: SERV_DAILY_BUDGET_USD, value: "0.50" }
+      - { key: SERV_TOTAL_BUDGET_USD, value: "1.70" }
+      - { key: SERV_COST_MULTIPLIER, value: "3" }
+      - { key: SERV_ASSUMED_SPENT_ON_RESET_USD, value: "0.15" }
+      - { key: SESSION_MAX_CALLS, value: "8" }
+      - { key: IP_DAILY_CALLS, value: "30" }
+      - { key: GLOBAL_SERV_CALLS_PER_MIN, value: "25" }
+      - { key: DEMO_RUNS_PER_DAY, value: "8" }
       - { key: KITE_NETWORK, value: kite-testnet }
       - { key: KITE_FACILITATOR_URL, value: "https://facilitator.pieverse.io" }
       - { key: KITE_EXPLORER_BASE, value: "https://testnet.kitescan.ai" }
@@ -24,7 +34,6 @@ services:
       # Secrets / per-deploy values: paste in the Render dashboard (values are NOT stored in git)
       - { key: PUBLIC_BASE_URL, sync: false }
       - { key: OPENSERV_API_KEY, sync: false }
-      - { key: SERV_DAILY_BUDGET_USD, sync: false }
       - { key: OWNER_TOKEN, sync: false }
       - { key: SHOP_WALLET_ADDRESS_NOMAD, sync: false }
       - { key: SHOP_WALLET_ADDRESS_BRIGHTBEAN, sync: false }

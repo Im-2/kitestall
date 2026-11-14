@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import qrcode from "qrcode-generator";
 import { REPO, TestnetBadge } from "./ui";
-import { StatsStrip } from "./live";
+import { StatsStrip, BudgetBanner } from "./live";
 
 const NAV: [string, string][] = [["home", "Home"], ["arena", "Arena"], ["watch", "Watch a shopper"], ["owner", "Open a stall"], ["verify", "Verify"]];
 
@@ -57,6 +57,7 @@ export function Shell({ route, children }: { route: string; children: ReactNode 
       <a className="skip" href="#main">Skip to content</a>
       <SiteHeader route={route} />
       <main id="main" className="page" tabIndex={-1}>
+        <BudgetBanner />
         {route !== "home" && <StatsStrip />}
         {children}
       </main>

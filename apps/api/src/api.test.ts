@@ -123,3 +123,41 @@ describe("free-tier cold start: history re-import", () => {
     expect(row(db, "SELECT COUNT(*) n FROM policies WHERE active=1").n).toBe(2); // live policy is a new version, historic stays immutable
   });
 });
+
+describe("SERV budget and abuse caps (SERV_MODE fallback_only: no live spend)", () => {
+  const mkApp = (over: Record<string, string> = {}) => {
+    const db = openDb(":memory:"); const e = { ...env, ...over } as NodeJS.ProcessEnv; seed(db, e);
+    const app = createApp({ db, env: e, facilitator: fac, serv: { baseUrl: "", apiKey: "", model: "m", mode: "fallback_only" } });
+    const neg = (b: unknown, h: Record<string, string> = {}) => app.request("/shops/nomad/negotiate", { method: "POST", headers: { "content-type": "application/json", ...h }, body: JSON.stringify(b) });
+    return { db, app, neg };
+  };
+  it("assumes a conservative spend after a cold start instead of zero, and reports it in /api/stats", async () => {
+    const t = mkApp(); const s = (await (await t.app.request("/api/stats")).json()).serv_budget;
+    expect(s.daily_spent_usd).toBeCloseTo(0.15, 4); expect(s.total_spent_usd).toBeCloseTo(0.15, 4); expect(s.capped).toBe(false);
+    expect(s.method).toMatch(/ESTIMATED/); expect(s.daily_cap_usd).toBe(0.5);
+  });
+  it("does not re-assume when the persisted counter already has rows", async () => {
+    const t = mkApp(); const before = row(t.db, "SELECT COUNT(*) n FROM serv_spend").n;
+    createApp({ db: t.db, env, facilitator: fac, serv: { baseUrl: "", apiKey: "", model: "m", mode: "fallback_only" } });
+    expect(row(t.db, "SELECT COUNT(*) n FROM serv_spend").n).toBe(before);
+  });
+  it("flips to the labeled fallback when the daily cap is reached", async () => {
+    const t = mkApp({ SERV_DAILY_BUDGET_USD: "0.50" });
+    run(t.db, "INSERT INTO serv_spend(day,kind,usd,created_at) VALUES(?,?,?,?)", new Date().toISOString().slice(0, 10), "negotiate", 0.4, new Date().toISOString());
+    const r = await (await t.neg({ item_id: "day-pass", qty: 1, offer_cents: 2300, message: "hi" })).json();
+    expect(r.serv.budget_capped).toBe(true); expect(r.serv.status).toBe("fallback"); expect(r.serv.note).toMatch(/deterministic fallback/);
+    const s = (await (await t.app.request("/api/stats")).json()).serv_budget; expect(s.capped).toBe(true); expect(s.reason).toMatch(/daily/);
+  });
+  it("hard-caps total messages per session", async () => {
+    const t = mkApp(); const first = await (await t.neg({ item_id: "day-pass", qty: 1, offer_cents: 2000, message: "x" })).json();
+    for (let i = 0; i < 8; i++) run(t.db, "INSERT INTO rounds(session_id,shop_id,round,status,created_at) VALUES(?,?,?,?,?)", first.session_id, "nomad", 1, "counter", new Date().toISOString());
+    const r = await t.neg({ session_id: first.session_id, item_id: "day-pass", qty: 1, offer_cents: 2000, message: "x" });
+    expect(r.status).toBe(429); expect((await r.json()).error.code).toBe("session_call_cap");
+  });
+  it("caps messages per IP per day (last x-forwarded-for entry is trusted)", async () => {
+    const t = mkApp({ IP_DAILY_CALLS: "2" }); const h = { "x-forwarded-for": "6.6.6.6, 9.9.9.9" };
+    const codes: number[] = []; for (let i = 0; i < 3; i++) codes.push((await t.neg({ item_id: "day-pass", qty: 1, offer_cents: 2000 + i, message: "x" }, h)).status);
+    expect(codes).toEqual([200, 200, 429]);
+    expect((await t.neg({ item_id: "day-pass", qty: 1, offer_cents: 2000, message: "x" }, { "x-forwarded-for": "1.1.1.1, 9.9.9.9" })).status).toBe(429); // spoofing the first entry does not help
+  });
+});
