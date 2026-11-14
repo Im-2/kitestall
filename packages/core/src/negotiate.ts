@@ -15,7 +15,7 @@ export interface RoundResult {
   attack: boolean;
 }
 
-const REFUSAL = "I can't act on that kind of request. Make me an offer on the item and I'll gladly work with you.";
+const REFUSAL = "That message was flagged by the safety filter, so I haven't acted on it and it did not use up one of your rounds. Please rephrase it and try again.";
 const SAFE: Record<string, string> = {
   counter: "Let me meet you partway.", accepted: "Deal, that works for me.", rejected: "I'm afraid I can't go further on this one.",
   clarify: "Could you tell me which item and how many, and what you'd like to pay?",

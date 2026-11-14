@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, sse, usd } from "../lib";
 
-type Msg = { who: "me" | "shop" | "sys"; text: string };
+type Msg = { who: "me" | "shop" | "sys" | "flag"; text: string };
 const rid = () => "web" + Math.random().toString(36).slice(2, 12);
 
 export function Arena() {
@@ -43,7 +43,12 @@ export function Arena() {
     const r = await api(`/shops/${shop}/negotiate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ session_id: session, item_id: item, qty: 1, offer_cents: off, message: text || undefined }) });
     setMsgs((m) => m.filter((x) => x.text !== "checking message with Prompt Guard… deciding…"));
     if (!r.ok) { setErr(r.data?.error?.message ?? "Request failed"); setBusy(false); return; }
-    setLast(r.data); setMsgs((m) => [...m, { who: "shop", text: r.data.message }]);
+    setLast(r.data);
+    if (r.data.serv?.guard === "blocked") { // friendly, non-error flow: keep the typed text so the visitor can rephrase; the round was not used; the guard is never bypassed
+      setMsgs((m) => [...m, { who: "flag", text: "That message was flagged by Prompt Guard. Try rephrasing it (the same words may pass on another try). It did not use up a round, and nothing changed about the price." }]);
+      setBusy(false); loadBoards(); setTimeout(() => document.getElementById("txt")?.focus(), 50); return;
+    }
+    setMsgs((m) => [...m, { who: "shop", text: r.data.message }]);
     if (r.data.quote) setMsgs((m) => [...m, { who: "sys", text: `Quote ${r.data.quote.quote_id}: ${usd(r.data.quote.unit_price_cents)} — pay with a shopper agent (see /watch or the CLI).` }]);
     setText(""); setOffer(""); setBusy(false); loadBoards();
   }

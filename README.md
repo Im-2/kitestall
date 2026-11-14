@@ -13,8 +13,14 @@ Most Kite agents are the *buyer's*. Kitestall is the *seller's*: a shop publishe
 | Landing (desktop) | Landing (mobile) |
 |---|---|
 | ![Landing desktop](docs/screenshots/landing-desktop.png) | ![Landing mobile](docs/screenshots/landing-mobile.png) |
+| **Arena** | **Arena: flagged message (friendly, no error)** |
+| ![Arena](docs/screenshots/arena-desktop.png) | ![Flagged](docs/screenshots/arena-flagged-390.png) |
+| **Verify a receipt (6 checks)** | **Owner dashboard: ledger, fees, SERV budget** |
+| ![Verify](docs/screenshots/verify-result-desktop.png) | ![Owner](docs/screenshots/owner-unlocked-desktop.png) |
+| **Header at 1024 px (no Menu button)** | **Mobile menu sheet (360 px)** |
+| ![Header](docs/screenshots/header-1024.png) | ![Menu](docs/screenshots/menu-sheet-360.png) |
 
-Arena, Watch, Owner dashboard and Verify: `docs/screenshots/` (desktop + mobile). Every number on the site comes from the live database.
+Also in `docs/screenshots/`: Watch, Owner, Verify at desktop and mobile widths. Every number on the site comes from the live database.
 
 ## 60-second quickstart
 ```bash
@@ -50,7 +56,7 @@ Details and honest caveats in [docs/SERV_NOTES.md](docs/SERV_NOTES.md).
 
 ## How we use Kite
 - **x402**: `/checkout` returns a 402 whose `amount` is exactly the quote in wei (testnet **PYUSD**, 18 decimals, chain `eip155:2368`). The shopper signs an EIP-3009 `transferWithAuthorization`; the server checks payee/amount/asset/nonce, calls the **Pieverse facilitator** `/v2/verify`, then settles.
-- **Honest finding:** Pieverse `/v2/settle` returned `transaction_failed` for every PYUSD authorization we tried (details in [docs/DISCOVERY.md](docs/DISCOVERY.md)). So the server falls back to **self-relay**: it submits the signed `transferWithAuthorization` itself (gas paid by the relayer). Receipts record `settled_via`. All four recorded sales settled via self-relay.
+- **Honest finding:** Pieverse `/v2/settle` returned `transaction_failed` for every PYUSD authorization we tried (details in [docs/DISCOVERY.md](docs/DISCOVERY.md)). So the server falls back to **self-relay**: it submits the signed `transferWithAuthorization` itself (gas paid by the relayer). Receipts record `settled_via`. All 5 recorded sales settled via self-relay (4 in `docs/history.json`, plus the live Story A run of 2026-11-14, `docs/E2E_LOG.md`).
 - **Signer used: dev signer** (a funded testnet EOA). **No Kite Passport session was used**, so Passport enforcement is *not* claimed. Story A's "session limit" is a **simulated** per-transaction cap enforced by the dev signer, labeled as such in the UI and logs. The signer sits behind a `PaymentSigner` interface so a `kpass`/Passport signer can be plugged in.
 
 ## Final round: best and final
@@ -67,10 +73,10 @@ In the last round the shop computes in code a best-and-final price (the floor pl
 | SERV cost abuse | Per-IP rate limits, round and session caps, daily budget guard that switches to labeled fallback |
 | Secrets | `.env` only (gitignored); `.dockerignore` excludes it |
 
-**Adversarial results** (live SERV, see BENCHMARKS.md for the generated table): 45 attacks and 41 benign messages replayed for up to 3 rounds each: **0 floor breaches, 0 leaks**. Prompt Guard blocked 73% of attacks, with a **22% false-positive rate** on benign messages (it is also non-deterministic). The rest is contained by code, not by the guard.
+**Adversarial results** (live SERV, see BENCHMARKS.md for the generated table): 45 attacks and 41 benign messages replayed for up to 3 rounds each: **0 floor breaches, 0 leaks**. Prompt Guard blocked 73% of attacks and flagged 22% (9/41) of benign messages, counting a message if any of its up-to-3 replays was blocked; on a separate fixed set of 16 benign messages (one call each) the production prompt had **0/16** blocks and two alternative prompts 1/16 each (`docs/BENCHMARKS.md`). It is non-deterministic. The guard is never weakened or retried; a flagged message gets a friendly "try rephrasing" notice and does not use a round. The rest is contained by code, not by the guard.
 
 ## Revenue model (accounting only)
-`platform_fee_bps` = 100 (1% of settled sales) and `quote_fee_cents` = 1 after 10 free rounds/day per buyer, written to `ledger_fees` and shown in the owner dashboard. **Accrued, not auto-collected.** Measured inputs: SERV inference cost per negotiation ≈ **$0.002** (estimate: token usage × catalog price; excludes SERV feature surcharges), see BENCHMARKS.md. Settlement options (split payment, invoice, paid firm quotes via x402) are roadmap.
+`platform_fee_bps` = 100 (1% of settled sales) and `quote_fee_cents` = 1 after 10 free rounds/day per buyer, written to `ledger_fees` and shown in the owner dashboard. **Accrued, not auto-collected.** Measured inputs: estimated SERV inference cost ≈ **$0.002 per 3-round negotiation** (token usage × catalog price; excludes SERV feature surcharges, `docs/BENCHMARKS.md`). The owner-read console balance fell from $2.03 to $2.01 over 7 live requests (rounded to the cent), about $0.003 per request all-in. Settlement options (split payment, invoice, paid firm quotes via x402) are roadmap.
 
 ## Verify a receipt
 `/#/verify`, `GET /receipts/:id/verify`, or `pnpm verify-receipt <base> <id>`. Checks: signature, every rule id exists in the published policy for that version, price within public bounds, policy hash, on-chain Transfer to payTo for the exact amount.
@@ -85,7 +91,7 @@ In the last round the shop computes in code a best-and-final price (the floor pl
 SERV credits are finite ($2 in total for this project). OpenServ exposes no balance API for API keys, so spend is **estimated** (token usage x catalog price x 3 safety multiplier; guard-blocked calls get a flat charge), persisted in SQLite and shown in `/api/stats` (`serv_budget`) and on the owner dashboard. Caps: **$0.50/day** and **$1.70 total**. When a cap is reached SERV is not called: rounds are decided by the **labeled deterministic fallback**, a banner says so on every page, and receipts record `fallback`. After a cold start with an empty counter the server assumes $0.15 was already spent, never $0. Abuse limits: 8 messages per session (Prompt Guard blocks count), 30 per IP per day, 25 SERV calls per minute globally, 8 demo-shopper runs per day. Prompt Guard is always on; Shadow Agent is off.
 
 ## Limitations
-Testnet only. Passport/kpass not used. Pieverse settle failing (self-relay used). Owner auth is a single bearer token; private policy and signing keys live in SQLite on the server. Seed floors in `packages/core/src/seed.ts` are public demo defaults (deployments get random salts and can override floors via `FLOOR_PCT_<SHOP>`), so the Arena tests the model/API path, not secrecy of those defaults. Prompt Guard false positives (~22% in our run) can block benign buyers; they cost no round. Live-site data is ephemeral on the free plan (see Free-tier limits). SERV credits are finite: when exhausted the shop runs in labeled fallback mode.
+Testnet only. **Kite Passport/kpass not used**: sign-up needs the owner's email and passkey, and Passport pays USDC.e on Kite *mainnet* with real money, so it cannot pay our testnet PYUSD checkout (details in `docs/DISCOVERY.md`). Pieverse settle failing (self-relay used). Owner auth is a single bearer token; private policy and signing keys live in SQLite on the server. Seed floors in `packages/core/src/seed.ts` are public demo defaults (deployments get random salts and can override floors via `FLOOR_PCT_<SHOP>`), so the Arena tests the model/API path, not secrecy of those defaults. Prompt Guard false positives (~22% in our run) can block benign buyers; they cost no round. Live-site data is ephemeral on the free plan (see Free-tier limits). SERV credits are finite: when exhausted the shop runs in labeled fallback mode.
 
 ## Roadmap
 Passport signer via `kpass`; real fee collection (split payment); third seed shop; paid firm-quote endpoint over x402; merchant-side Passport verification when an API exists.

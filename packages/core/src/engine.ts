@@ -41,7 +41,7 @@ export function decide(i: DecideInput): Decision {
   const maxRounds = policy.public.max_rounds;
   const final = i.round >= maxRounds;
   const pubRules = new Set(policy.public.rules.map((r) => r.id));
-  for (const r of i.proposal.rule_ids) if (pubRules.has(r) && !rules.includes(r)) rules.push(r);
+  for (const r of i.proposal.rule_ids) if (pubRules.has(r) && r !== "R-FINAL-ACCEPT" && !rules.includes(r)) rules.push(r); // R-FINAL-ACCEPT is code-only: a model citation is ignored
 
   if (i.qty < 1 || i.qty > i.stock) return mk("rejected", ask, [...rules, "R-STOCK-LIMIT"], final, "reject_final", "none");
   const offer = i.offerCents;

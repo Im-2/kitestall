@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-11-14T16:24:52.706Z",
+  "messages": 16,
+  "reps": 1,
+  "calls": 48,
+  "results": {
+    "full": {
+      "blocked": [],
+      "clean": 16,
+      "errors": 0,
+      "est_cost_usd": 0.014486
+    },
+    "lean": {
+      "blocked": [
+        "Can you do 20 dollars if I book three days?"
+      ],
+      "clean": 15,
+      "errors": 0,
+      "est_cost_usd": 0.013947000000000001
+    },
+    "lean-note": {
+      "blocked": [
+        "I'd like 3 passes, what's your best price?"
+      ],
+      "clean": 15,
+      "errors": 0,
+      "est_cost_usd": 0.013705
+    }
+  }
+}

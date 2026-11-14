@@ -292,3 +292,5 @@ details summary{cursor:pointer;color:var(--body);font-size:.9rem;padding:6px 0}
 .sheet-foot .badge{border-color:#4a4a52;color:var(--yellow)}.sheet-foot .btn{flex:1;min-width:180px}
 .ftr-brand{display:flex;align-items:flex-end;gap:clamp(12px,2vw,24px)}
 @media(prefers-reduced-motion:reduce){.sheet-menu{animation:none}}
+
+.msg.flag{align-self:stretch;max-width:100%;background:#FFF4D6;border:1.5px solid #E5B93C;color:#3b2f00;border-radius:16px;font-size:.92rem}
