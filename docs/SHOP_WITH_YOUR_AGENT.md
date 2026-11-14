@@ -42,7 +42,7 @@ curl -s -X POST $B/shops/nomad/firm-quote -H 'content-type: application/json' -d
 # pay it with the same X-PAYMENT flow; the 200 response contains firm_quote{…, quote_id, valid_until, signature} and the fee tx
 # then POST /shops/nomad/checkout {"quote_id":"fq_…"} and pay the quoted price as above
 ```
-Verified end to end (see `docs/E2E_LOG.md`, entry "PAID FIRM QUOTE"). The fee is recorded in the owner ledger as **collected** (it was actually paid on-chain on testnet); platform and per-round fees stay **accrued**, not collected.
+Verified end to end, locally and on the live site (see `docs/E2E_LOG.md`, entries "PAID FIRM QUOTE"; the live fee tx is `0xd1faccba34275dc8aa107b9592f05ac45a1dcc37f5889e329a881ab4b041da77`). The fee is recorded in the owner ledger as **collected** (it was actually paid on-chain on testnet); platform and per-round fees stay **accrued**, not collected.
 
 ## 4. Verify what you bought
 ```bash

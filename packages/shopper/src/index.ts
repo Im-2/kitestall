@@ -94,7 +94,7 @@ export async function runShopper(o: ShopperOpts): Promise<ShopperResult> {
 }
 
 /** Firm-quote path: pay a small x402 fee first (to the platform wallet), receive a signed time-locked price, then check out at that price. No haggling, no SERV. */
-export async function runFirmQuoteShopper(o: Omit<ShopperOpts, "budgetCents" | "eager" | "maxRoundsPerSession">): Promise<ShopperResult & { firmQuote?: any; feeTx?: string }> {
+export async function runFirmQuoteShopper(o: Omit<ShopperOpts, "budgetCents" | "eager" | "maxRoundsPerSession"> & { feeOnly?: boolean }): Promise<ShopperResult & { firmQuote?: any; feeTx?: string }> {
   const emit = (type: string, d: Record<string, unknown> = {}) => o.onEvent?.({ type, ts: new Date().toISOString(), ...d });
   const qty = o.qty ?? 1; const base = o.baseUrl.replace(/\/$/, ""); const payer = await o.signer.address();
   emit("signer", { kind: o.signer.kind, label: o.signer.label, payer });
@@ -110,6 +110,7 @@ export async function runFirmQuoteShopper(o: Omit<ShopperOpts, "budgetCents" | "
   const f2 = await j(`${base}/shops/${o.shopId}/firm-quote`, { method: "POST", headers: { "content-type": "application/json", "X-PAYMENT": encodePayment(fp) }, body: JSON.stringify({ item_id: o.itemId, qty }) });
   if (f2.status !== 200) { emit("error", { message: f2.body?.error?.message ?? "firm quote payment failed", status: f2.status }); return { ok: false, reason: "firm_payment" }; }
   const fq = f2.body.firm_quote; emit("firm_quote", { firm_quote: fq, fee_tx: fq.fee.tx_hash, explorer: f2.body.explorer_url });
+  if (o.feeOnly) return { ok: true, firmQuote: fq, feeTx: fq.fee.tx_hash }; // buy only the 5-cent firm quote; do not purchase the item
   const c1 = await j(`${base}/shops/${o.shopId}/checkout`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ quote_id: fq.quote_id }) });
   if (c1.status !== 402) { emit("error", { message: "expected 402", status: c1.status }); return { ok: false, reason: "no402", firmQuote: fq, feeTx: fq.fee.tx_hash }; }
   const req: PaymentRequirements = c1.body.accepts[0]; emit("payment_required", { amount_wei: req.amount, pay_to: req.payTo, network: req.network, asset: req.asset, quote_id: fq.quote_id });
