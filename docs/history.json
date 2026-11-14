@@ -19,6 +19,13 @@
       "hash": "sha256:88480e42f2e35a6badfd6b532f73e5e3d05b5c8651ef2b50e2ab9ac537d09b1b",
       "public_json": "{\"max_discount_pct\":15,\"persona\":\"firm\",\"max_rounds\":3,\"quote_ttl_seconds\":300,\"rules\":[{\"id\":\"R-VOL-5\",\"kind\":\"volume_tier\",\"text\":\"5% off 2 kg or more.\",\"params\":{\"min_qty\":2,\"pct\":5}},{\"id\":\"R-VOL-10\",\"kind\":\"volume_tier\",\"text\":\"10% off 5 kg or more.\",\"params\":{\"min_qty\":5,\"pct\":10}},{\"id\":\"R-LOYAL-3\",\"kind\":\"loyalty\",\"text\":\"3% extra for returning customers.\",\"params\":{\"pct\":3}},{\"id\":\"R-CAP-15\",\"kind\":\"cap\",\"text\":\"No discount ever exceeds 15% off list.\",\"params\":{\"pct\":15}}]}",
       "created_at": "2026-11-14T12:49:21.276Z"
+    },
+    {
+      "shop_id": "nomad",
+      "version": 2,
+      "hash": "sha256:51462386408358274f6fde3f2d212c11728c06edd41543b24ead500cfeb4b16a",
+      "public_json": "{\"max_discount_pct\":30,\"persona\":\"friendly\",\"max_rounds\":3,\"quote_ttl_seconds\":300,\"rules\":[{\"id\":\"R-VOL-10\",\"kind\":\"volume_tier\",\"text\":\"10% off when booking 3 or more day passes.\",\"params\":{\"min_qty\":3,\"pct\":10}},{\"id\":\"R-WEEKDAY-15\",\"kind\":\"time_window\",\"text\":\"15% off the 5-day bundle Monday to Wednesday.\",\"params\":{\"days\":[1,2,3],\"pct\":15}},{\"id\":\"R-CAP-30\",\"kind\":\"cap\",\"text\":\"No discount ever exceeds 30% off list.\",\"params\":{\"pct\":30}},{\"id\":\"R-FINAL-ACCEPT\",\"kind\":\"final_round\",\"text\":\"In the final round the shop accepts any offer at or above its best-and-final price (slightly above its minimum), at the buyer's offer.\",\"params\":{}}]}",
+      "created_at": "2026-11-14T16:17:55.454Z"
     }
   ],
   "sales": [
@@ -537,6 +544,38 @@
         "accrued_only": 1,
         "created_at": "2026-11-14T13:04:32.989Z"
       }
+    },
+    {
+      "receipt_only": true,
+      "order": {
+        "id": "o_548476234d52",
+        "quote_id": "q_7484fffff25d",
+        "shop_id": "nomad",
+        "item_id": "day-pass",
+        "qty": 1,
+        "total_cents": 2250,
+        "voucher": "KS-1BED9B8C",
+        "created_at": "2026-11-14T16:21:25.706Z"
+      },
+      "receipt": {
+        "id": "rc_dd819f9c3b40",
+        "order_id": "o_548476234d52",
+        "shop_id": "nomad",
+        "json": "{\"receipt_id\":\"rc_dd819f9c3b40\",\"shop_id\":\"nomad\",\"item\":{\"id\":\"day-pass\",\"qty\":1},\"list_price_cents\":2500,\"agreed_price_cents\":2250,\"rounds\":3,\"rules_fired\":[\"R-PG-CLEAN\",\"R-CAP-30\",\"R-STOCK-OK\",\"R-FINAL-ACCEPT\",\"R-ROUND-CAP\",\"R-FLOOR-OK\"],\"policy\":{\"version\":2,\"hash\":\"sha256:51462386408358274f6fde3f2d212c11728c06edd41543b24ead500cfeb4b16a\"},\"serv\":{\"model\":\"gpt-5.4-mini-serv-multipath\",\"features\":[\"prompt_guard\",\"schema\",\"multipath\"],\"request_ids\":[\"chatcmpl-EkAn44ZTnt71XuXN5kt38wXpn6t0q\",\"chatcmpl-EkAn9xwJja8ofpiXO8OLKxT87dW6v\",\"chatcmpl-EkAnBWI0wpXcnwzqvO91PVyeCWiUP\"],\"status\":\"live\"},\"payment\":{\"network\":\"kite-testnet\",\"tx_hash\":\"0xfe5b534ad9d982a96d30154dbee28cb1600323bf93936a669d2738c6f65c0c51\",\"payer\":\"0xA03C4b33c55da051f0D4dBFA12fF05Ddb227a29f\",\"pay_to\":\"0x8D06Dd5D6b9B634ade658ea5ab9c262e6787d8bb\",\"amount_wei\":\"22500000000000000000\",\"settled_via\":\"self-relay\"},\"passport\":{\"status\":\"not_verified_by_merchant\"},\"issued_at\":\"2026-11-14T16:21:25.706Z\",\"signature\":\"ed25519:J_-F40hgfMoD3Bl2GRErx8ttCxO8iGqY8v4r5e8G9M21gHZydLYeK_F3r3qN7ZB3H5fqyKnNquApyf3ZKTh6Cw\"}",
+        "created_at": "2026-11-14T16:21:25.706Z"
+      },
+      "payment": {
+        "quote_id": "q_7484fffff25d",
+        "nonce": null,
+        "tx_hash": "0xfe5b534ad9d982a96d30154dbee28cb1600323bf93936a669d2738c6f65c0c51",
+        "payer": "0xA03C4b33c55da051f0D4dBFA12fF05Ddb227a29f",
+        "amount_wei": "22500000000000000000",
+        "status": "settled",
+        "detail": null,
+        "signer_kind": "x402",
+        "created_at": "2026-11-14T16:21:25.706Z"
+      }
     }
-  ]
+  ],
+  "merged_from_live_at": "2026-11-14T16:31:06.303Z"
 }
