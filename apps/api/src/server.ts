@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { PieverseFacilitator, SelfRelayFacilitator, FallbackFacilitator, KITE_TESTNET } from "@kitestall/core";
 import { createApp } from "./app.ts";
 import { openDb } from "./db.ts";
-import { seed, importHistory, assertSeeded } from "./seed.ts";
+import { seed, importHistory, assertSeeded, ensureFinalRule } from "./seed.ts";
 
 // load repo-root .env for local dev (Render/Docker use real env vars)
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -18,6 +18,7 @@ const t0 = Date.now();
 const historyFile = resolve(root, "docs/history.json");
 seed(db, env, historyFile);
 const hist = importHistory(db, historyFile);
+ensureFinalRule(db);
 const boot = assertSeeded(db);
 try { // warn loudly if the configured signing keys do not match the keys that signed the committed history
   const hp = JSON.parse(readFileSync(resolve(root, "docs/history.json"), "utf8")).shop_public_keys ?? {};

@@ -37,7 +37,7 @@ code,pre,.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.82e
 .hdr{position:sticky;top:10px;z-index:50;padding-top:10px}
 .hdr-bar{background:var(--black);color:#fff;border-radius:22px;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 18px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
 .brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:500;font-size:1.2rem;letter-spacing:-.03em;color:#fff}
-.brand img{width:30px;height:30px;border-radius:9px;background:#fff;padding:3px;object-fit:contain}
+
 .nav{display:flex;gap:4px;margin:0 auto}
 .nav a{color:#C9CBD2;text-decoration:none;font-size:.95rem;padding:8px 14px;border-radius:99px;transition:background .3s var(--ease),color .3s var(--ease)}
 .nav a:hover,.nav a.on{background:#232327;color:#fff}
@@ -263,3 +263,32 @@ details summary{cursor:pointer;color:var(--body);font-size:.9rem;padding:6px 0}
 .dash.compact .dh{font-size:.8rem}
 
 .banner{background:#FFF4D6;border:1.5px solid #E5B93C;color:#3b2f00;border-radius:var(--r-md);padding:12px 16px;margin:12px 0;font-size:.92rem}
+
+/* ---- brand mark + header (v2) ---- */
+.mark-sq{width:32px;height:32px;border-radius:9px;display:block;flex:none;object-fit:cover}
+.mark-sq.big{width:clamp(48px,7vw,72px);height:clamp(48px,7vw,72px);border-radius:clamp(12px,2vw,18px)}
+.brand img{background:none;padding:0;border-radius:9px}
+.hdr-right{display:flex;align-items:center;gap:10px;margin-left:auto}
+.nav{margin:0 auto}
+/* the Menu button exists ONLY at tablet/mobile widths (the earlier .btn rule had overridden display:none) */
+.hdr .menu-btn{display:none}
+.menu-btn{gap:10px;padding:0 16px}
+.burger{display:inline-grid;gap:4px}.burger i{display:block;width:18px;height:2px;background:currentColor;border-radius:2px}
+@media(max-width:900px){
+  .hdr .nav{display:none}
+  .hdr .menu-btn{display:inline-flex}
+  .hdr .cta-pill{display:none}
+  .hdr-bar{gap:8px}
+}
+@media(max-width:380px){.hdr .badge{display:none}.menu-label{display:none}.menu-btn{padding:0 14px}}
+.sheet-menu{position:fixed;inset:0;z-index:80;background:var(--black);color:#fff;padding:14px var(--gut) 28px;display:flex;flex-direction:column;gap:18px;overflow:auto;animation:sheetIn .35s var(--ease)}
+@keyframes sheetIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+.sheet-top{display:flex;align-items:center;justify-content:space-between;padding:8px 6px 8px 8px}
+.sheet-menu nav{display:flex;flex-direction:column;margin-top:6px}
+.sheet-menu nav a{color:#fff;text-decoration:none;font-size:clamp(1.8rem,8vw,2.6rem);letter-spacing:-.03em;font-weight:300;padding:14px 8px;border-bottom:1px solid #26262b;min-height:56px;display:flex;align-items:center}
+.sheet-menu nav a.on{color:var(--yellow)}
+.sheet-menu nav a:focus-visible{outline-color:#fff}
+.sheet-foot{margin-top:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.sheet-foot .badge{border-color:#4a4a52;color:var(--yellow)}.sheet-foot .btn{flex:1;min-width:180px}
+.ftr-brand{display:flex;align-items:flex-end;gap:clamp(12px,2vw,24px)}
+@media(prefers-reduced-motion:reduce){.sheet-menu{animation:none}}

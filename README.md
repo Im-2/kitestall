@@ -53,6 +53,9 @@ Details and honest caveats in [docs/SERV_NOTES.md](docs/SERV_NOTES.md).
 - **Honest finding:** Pieverse `/v2/settle` returned `transaction_failed` for every PYUSD authorization we tried (details in [docs/DISCOVERY.md](docs/DISCOVERY.md)). So the server falls back to **self-relay**: it submits the signed `transferWithAuthorization` itself (gas paid by the relayer). Receipts record `settled_via`. All four recorded sales settled via self-relay.
 - **Signer used: dev signer** (a funded testnet EOA). **No Kite Passport session was used**, so Passport enforcement is *not* claimed. Story A's "session limit" is a **simulated** per-transaction cap enforced by the dev signer, labeled as such in the UI and logs. The signer sits behind a `PaymentSigner` interface so a `kpass`/Passport signer can be plugged in.
 
+## Final round: best and final
+In the last round the shop computes in code a best-and-final price (the floor plus 10% of the remaining headroom, never below the floor) and accepts any offer at or above it, at the buyer's offer, citing the public rule **R-FINAL-ACCEPT** (listed in every published policy and in receipts). It never accepts at exactly the floor, and the model never sees the floor or the price. A buyer who gets a best-and-final counter can take it in one more message, which is decided by code with no SERV call.
+
 ## Security model
 | Threat | Control |
 |---|---|

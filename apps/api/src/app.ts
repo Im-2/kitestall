@@ -6,7 +6,7 @@ import { z } from "zod";
 import { randomBytes, randomUUID, createHash } from "node:crypto";
 import { createPublicClient, http } from "viem";
 import {
-  negotiateRound, build402, decodePayment, centsToWei, weiToCents, feeBps, signReceipt, verifyReceipt, policyHash, publicView, compilePolicy,
+  negotiateRound, withFinalRule, build402, decodePayment, centsToWei, weiToCents, feeBps, signReceipt, verifyReceipt, policyHash, publicView, compilePolicy,
   PolicySpecSchema, effectiveFloor, decide, fallbackProposal, KITE_TESTNET, DevSigner, estimateCostUsd,
   type PolicySpec, type Facilitator, type ServConfig, type Receipt, type Check,
 } from "@kitestall/core";
@@ -132,6 +132,15 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
     if (ip(c) !== "local") { const ipCalls = row(db, "SELECT COUNT(*) n FROM rounds r JOIN sessions s ON s.id=r.session_id WHERE s.ip=? AND r.created_at>=?", ip(c), day())?.n ?? 0; if (ipCalls >= ipDailyCalls) return err(c, 429, "ip_daily_cap", "Daily message limit reached for your network. Try again tomorrow."); }
     const round = sess.round + 1;
     emitTrace(sid, { phase: "received", round });
+    if (round > policy.public.max_rounds && b.offer_cents != null && b.offer_cents >= sess.ask_cents && sess.round === policy.public.max_rounds) {
+      // the buyer takes the standing best-and-final ask: decided by code, no SERV call, labeled as such
+      const qid = id("q"); const ttl = policy.public.quote_ttl_seconds; const total = sess.ask_cents * b.qty; const exp = new Date(Date.now() + ttl * 1000).toISOString();
+      run(db, "INSERT INTO rounds(session_id,shop_id,round,buyer_message,offer_cents,status,ask_cents,message,rules_json,guard,serv_status,concession,action,serv_json,est_cost_usd,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        sid, shopId, round, "", b.offer_cents, "accepted", sess.ask_cents, "Taking the standing best-and-final price.", JSON.stringify(["R-STOCK-OK", "R-ROUND-CAP", "R-FLOOR-OK"]), "unknown", "fallback", "none", "accept_offer", "null", 0, now());
+      run(db, "INSERT INTO quotes(id,session_id,shop_id,item_id,qty,unit_price_cents,total_cents,policy_version,status,expires_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)", qid, sid, shopId, item.id, b.qty, sess.ask_cents, total, policy.version, "open", exp, now());
+      run(db, "UPDATE sessions SET round=?, status='accepted' WHERE id=?", round, sid);
+      return c.json({ session_id: sid, round, status: "accepted", ask_cents: sess.ask_cents, quote: { quote_id: qid, unit_price_cents: sess.ask_cents, total_cents: total, qty: b.qty, expires_at: exp, testnet: true }, message: `Agreed at $${(sess.ask_cents / 100).toFixed(2)}, the best-and-final price.`, rules_fired: ["R-STOCK-OK", "R-ROUND-CAP", "R-FLOOR-OK"], final: true, serv: { status: "fallback", guard: "unknown", model: null, features: [], request_id: null, latency_ms: null, budget_capped: false, note: "Standing best-and-final ask accepted by code; no SERV call" }, testnet: true });
+    }
     if (round > policy.public.max_rounds) {
       run(db, "UPDATE sessions SET status='rejected' WHERE id=?", sid);
       return c.json({ session_id: sid, round, status: "rejected", ask_cents: sess.ask_cents, message: "We've reached the round limit for this item.", rules_fired: ["R-ROUND-CAP"], serv: null });
@@ -334,6 +343,7 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
   });
   function draftToSpec(shopId: string, version: number, dr: z.infer<typeof DraftZ>): { ok: true; spec: PolicySpec } | { ok: false; errors: string[] } {
     const spec = { shop_id: shopId, version, created_at: now(), public: { max_discount_pct: Math.min(90, Math.max(0, dr.max_discount_pct)), persona: dr.persona, max_rounds: Math.min(6, Math.max(1, dr.max_rounds || 3)), quote_ttl_seconds: 300, rules: dr.rules.map((r) => ({ id: r.id.toUpperCase().replace(/[^A-Z0-9-]/g, "-").replace(/^(?!R-)/, "R-").slice(0, 24), kind: r.kind, text: r.text.slice(0, 300), params: {} })) }, private: { floor: { default_pct_of_list: Math.min(100, Math.max(1, dr.floor_default_pct)) }, salt: randomBytes(16).toString("hex") } };
+    spec.public = withFinalRule(spec.public);
     const v = PolicySpecSchema.safeParse(spec); return v.success ? { ok: true, spec: v.data } : { ok: false, errors: v.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) };
   }
   app.post("/owner/shops", async (c) => {

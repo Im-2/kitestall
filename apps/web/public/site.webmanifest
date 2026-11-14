@@ -1,0 +1,14 @@
+{
+  "name": "Kitestall",
+  "short_name": "Kitestall",
+  "description": "A storefront agent that haggles within your rules and shows its work. Kite testnet.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#E9EAEE",
+  "theme_color": "#0D0D0F",
+  "icons": [
+    { "src": "/kitestall-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/kitestall-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/kitestall-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

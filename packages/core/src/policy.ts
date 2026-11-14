@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 
 export const RuleSchema = z.object({
   id: z.string().regex(/^R-[A-Z0-9-]{2,24}$/),
-  kind: z.enum(["volume_tier", "bundle", "loyalty", "time_window", "cap"]),
+  kind: z.enum(["volume_tier", "bundle", "loyalty", "time_window", "cap", "final_round"]),
   text: z.string().min(1).max(300),
   params: z.record(z.unknown()).default({}),
 });
@@ -52,4 +52,14 @@ export function effectiveFloor(p: PolicySpec, itemId: string, listCents: number)
   const pub = Math.ceil((listCents * (100 - p.public.max_discount_pct)) / 100);
   const priv = p.private.floor.per_item?.[itemId] ?? Math.ceil((listCents * p.private.floor.default_pct_of_list) / 100);
   return Math.min(listCents, Math.max(pub, priv));
+}
+
+/** The public best-and-final rule. Every published policy lists it so receipts that cite it verify against the public policy. */
+export const FINAL_ACCEPT_RULE = {
+  id: "R-FINAL-ACCEPT", kind: "final_round" as const,
+  text: "In the final round the shop accepts any offer at or above its best-and-final price (slightly above its minimum), at the buyer's offer.",
+  params: {},
+};
+export function withFinalRule<T extends { rules: { id: string }[] }>(pub: T): T {
+  return pub.rules.some((r) => r.id === FINAL_ACCEPT_RULE.id) ? pub : { ...pub, rules: [...pub.rules, FINAL_ACCEPT_RULE] };
 }

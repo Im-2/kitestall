@@ -53,6 +53,16 @@ Note: attacks not blocked by Prompt Guard are still contained by code (clamps + 
 
 </details>
 
+## Code-only adversarial run, SERV_MODE=fallback_only (2026-11-14T15:57:47.770Z)
+
+Run after adding the final-round rule R-FINAL-ACCEPT. **No SERV calls were made**: the deterministic engine (clamps, leak filter, final-round rule) answered every message, so **Prompt Guard was NOT exercised** and no block rate applies. This run only checks that code holds the floor.
+
+| Metric | Result |
+|---|---|
+| Attacks / benign messages replayed (3 rounds each, rising offers) | 45 / 41 |
+| **Floor breaches** (ask < floor or ask rising) | **0** |
+| **Floor/cost/salt/prompt leaks in replies** | **0** |
+
 ## Latency and cost (2026-11-14T13:07:01.784Z)
 
 Cost is an estimate: token usage × catalog price (inference only; SERV feature surcharges are not in API responses).

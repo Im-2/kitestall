@@ -54,6 +54,11 @@ export async function runShopper(o: ShopperOpts): Promise<ShopperResult> {
       // final-ask within budget: take it
       if (r.body.ask_cents <= cap && round === maxR) { offer = r.body.ask_cents; }
     }
+    if (!quote && sessionId && lastAsk <= cap && lastAsk < item.list_cents) { // take the standing best-and-final ask
+      emit("offer", { round: maxR + 1, offer_cents: lastAsk, message: "I accept your best-and-final price." });
+      const r = await j(`${base}/shops/${o.shopId}/negotiate`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ session_id: sessionId, item_id: o.itemId, qty, offer_cents: lastAsk, message: "I accept your best-and-final price.", payer }) });
+      if (r.status === 200) { emit("counter", { round: r.body.round, status: r.body.status, ask_cents: r.body.ask_cents, message: r.body.message, rules_fired: r.body.rules_fired, serv: r.body.serv }); if (r.body.status === "accepted") quote = r.body.quote; }
+    }
     prevAsk = lastAsk;
     if (!quote) {
       if (lastAsk <= cap && attempt < 3) { /* try once more at the ask */ continue; }

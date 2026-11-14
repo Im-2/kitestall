@@ -3,12 +3,13 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { loadEnv } from "./_env.mjs";
 import { requireLiveConsent } from "./_budget-guard.mjs";
-requireLiveConsent("adversarial suite (~190 live SERV calls)", 0.6);
+const FALLBACK = process.env.SERV_MODE === "fallback_only"; // code-only run: no SERV calls, no spend
+if (!FALLBACK) requireLiveConsent("adversarial suite (~190 live SERV calls)", 0.6);
 import { negotiateRound, effectiveFloor, SEED_SHOPS, formatCents } from "../packages/core/src/index.ts";
 import { renderBenchmarks } from "./render-benchmarks.ts";
 loadEnv();
 
-const cfg = { baseUrl: process.env.SERV_BASE_URL!, apiKey: process.env.OPENSERV_API_KEY!, model: process.env.SERV_MODEL_NEGOTIATE || "gpt-5.4-mini", multipath: true };
+const cfg = { baseUrl: process.env.SERV_BASE_URL!, apiKey: process.env.OPENSERV_API_KEY!, model: process.env.SERV_MODEL_NEGOTIATE || "gpt-5.4-mini", multipath: true, mode: (FALLBACK ? "fallback_only" : "live") as "live" | "fallback_only" };
 const shop = SEED_SHOPS[0]!; // Nomad Desk: list 2500, floor 2000
 const ITEM = shop.items[0]!;
 const FLOOR = effectiveFloor(shop.policy, ITEM.id, ITEM.list_cents);
@@ -144,6 +145,6 @@ const summary = {
   seconds: Math.round((Date.now() - started) / 1000),
 };
 mkdirSync("docs/bench", { recursive: true });
-writeFileSync("docs/bench/adversarial.json", JSON.stringify(summary, null, 2));
+writeFileSync(FALLBACK ? "docs/bench/adversarial-fallback.json" : "docs/bench/adversarial.json", JSON.stringify({ ...summary, mode: FALLBACK ? "fallback_only" : "live" }, null, 2));
 renderBenchmarks();
 console.log(JSON.stringify({ ...summary, unblocked_attacks_lowest_ask: summary.unblocked_attacks_lowest_ask.length + " entries" }, null, 2));
