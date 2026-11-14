@@ -3,7 +3,8 @@
 - [x] Repo public: https://github.com/Im-2/kitestall
 - [x] MIT license
 - [x] No secrets committed (history scanned; `.env` ignored; `.dockerignore`)
-- [ ] Demo URL live (human: Render Blueprint deploy; then smoke test landing, Arena, Watch, Verify)
+- [ ] Demo URL live (human: Render **free** Blueprint deploy; then smoke test landing, Arena, Watch, Verify)
+- [ ] Free uptime pinger set up (UptimeRobot, HTTP monitor on `<DEPLOY_URL>/healthz`, 5-minute interval) and a warm-up request sent before recording/judging
 - [ ] Fund SERV credits (balance was $0.03 at last check) and set `SERV_DAILY_BUDGET_USD`
 - [ ] Re-run `pnpm e2e:kite <DEPLOY_URL> story-a` against the deployed URL (log appends to docs/E2E_LOG.md); commit
 - [ ] Demo video recorded and uploaded (docs/DEMO_SCRIPT.md)

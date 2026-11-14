@@ -29,17 +29,17 @@ export function Owner() {
     setBusy(""); setMsg(r.ok ? `Created shop ${nw.id}. Now compile and publish a policy for it.` : r.data?.error?.message ?? "Could not create shop"); if (r.ok) setShop(nw.id);
   }
   return (
-    <div style={{ paddingTop: 22 }}>
-      <h1 style={{ fontSize: "2.2rem" }}>Open your stall</h1>
-      <p>Owner access uses a single bearer token set by the operator (demo-grade auth). The token stays in this tab's session storage only.</p>
-      <label htmlFor="tok">Owner token</label><input id="tok" type="password" value={token} onChange={(e) => save(e.target.value)} autoComplete="off" placeholder="Paste OWNER_TOKEN" style={{ maxWidth: 420 }} />
+    <div>
+      <div className="app-top"><h1>Open your stall</h1>
+      <p>Owner access uses a single bearer token set by the operator (demo-grade auth). The token stays in this tab's session storage only.</p></div>
+      <div className="card"><label htmlFor="tok">Owner token</label><input id="tok" type="password" value={token} onChange={(e) => save(e.target.value)} autoComplete="off" placeholder="Paste OWNER_TOKEN" style={{ maxWidth: 420 }} /></div>
       {!token ? <p className="empty">Enter the owner token to continue.</p> : <>
         <div className="grid2" style={{ marginTop: 16 }}>
           <section className="card">
             <h2>1 · Your policy, in plain English</h2>
             <label htmlFor="shopsel">Apply to shop</label><select id="shopsel" value={shop} onChange={(e) => setShop(e.target.value)}>{shops.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.id})</option>)}</select>
             <label htmlFor="eng">Policy</label><textarea id="eng" rows={7} value={english} onChange={(e) => setEnglish(e.target.value)} />
-            <p><button className="btn" onClick={compile} disabled={!!busy}>{busy === "compile" ? "Compiling with SERV…" : "Compile with SERV"}</button></p>
+            <p><button className="btn primary" onClick={compile} disabled={!!busy}>{busy === "compile" ? "Compiling with SERV…" : "Compile with SERV"}</button></p>
             {msg && <p role="status" className={msg.startsWith("Could") || msg.includes("wrong") ? "err" : ""}>{msg}</p>}
           </section>
           <section className="card">
@@ -48,11 +48,11 @@ export function Owner() {
               <ul>{compiled.understood.map((u: string, i: number) => <li key={i}>{u}</li>)}</ul>
               <p>Persona <span className="badge blue">{compiled.draft.persona}</span> · max discount <b>{compiled.draft.max_discount_pct}%</b> (public) · rounds <b>{compiled.draft.max_rounds}</b> · private floor <b>{compiled.draft.floor_default_pct}% of list</b> (never published)</p>
               <p>Public rules: {compiled.public_rules.map((r: any) => <span className="chip" key={r.id} title={r.text}>{r.id}</span>)}</p>
-              <p className="row"><button className="btn ghost" onClick={runPreview} disabled={!!busy}>{busy === "preview" ? "Simulating…" : "Run 5 simulated haggles"}</button><button className="btn" onClick={publish} disabled={!!busy}>Approve & publish</button></p>
+              <p className="row"><button className="btn ghost" onClick={runPreview} disabled={!!busy}>{busy === "preview" ? "Simulating…" : "Run 5 simulated haggles"}</button><button className="btn primary" onClick={publish} disabled={!!busy}>Approve & publish</button></p>
             </>}
           </section>
         </div>
-        {preview && <section className="card" style={{ marginTop: 16 }}><h2>3 · Simulated haggles</h2><p className="mono">{preview.method}</p>
+        {preview && <section className="card" style={{ marginTop: 16 }}><h2>3 · Simulated haggles</h2><p className="sm">{preview.method}</p>
           <div className="tablewrap"><table><thead><tr><th>Buyer offers</th><th>Outcome</th><th>Final</th><th>Rounds</th></tr></thead><tbody>{preview.simulations.map((s: any, i: number) => <tr key={i}><td>{usd(s.buyer_offer_cents)}</td><td>{s.outcome}</td><td>{usd(s.final_price_cents)}</td><td>{s.rounds}</td></tr>)}</tbody></table></div></section>}
         <section className="card" style={{ marginTop: 16 }}>
           <h2>Create a new shop</h2>
@@ -64,7 +64,7 @@ export function Owner() {
         <section className="card" style={{ marginTop: 16 }}>
           <h2>Sales ledger <span className="badge">testnet</span></h2>
           {!ledger ? <p className="empty">Ledger unavailable (check the token).</p> : <>
-            <p className="mono">{ledger.note}</p>
+            <p className="sm">{ledger.note}</p>
             <p>Fees accrued: {ledger.fees.length ? ledger.fees.map((f: any) => <span className="chip" key={f.kind}>{f.kind}: {usd(f.cents)} ({f.n})</span>) : <span className="empty">none yet</span>}</p>
             {ledger.needs_reconcile.length > 0 && <p className="err">Needs reconcile: {ledger.needs_reconcile.length} payment(s) — settled or unknown on-chain without fulfilment.</p>}
             {ledger.sales.length === 0 ? <p className="empty">No settled sales yet.</p> : <div className="tablewrap"><table><thead><tr><th>When</th><th>Shop</th><th>Item</th><th>Total</th><th>Tx</th><th>Receipt</th></tr></thead><tbody>{ledger.sales.map((s: any) => <tr key={s.order_id}><td>{new Date(s.created_at).toLocaleString()}</td><td>{s.shop_id}</td><td>{s.item_id} ×{s.qty}</td><td>{usd(s.total_cents)}</td><td><a href={`${EXPLORER}/tx/${s.tx_hash}`} target="_blank" rel="noreferrer" className="mono">{short(s.tx_hash)}</a></td><td><a href={`#/verify?id=${s.receipt_id}`}>verify</a></td></tr>)}</tbody></table></div>}

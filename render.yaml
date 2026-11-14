@@ -1,18 +1,16 @@
+# Render FREE plan: no persistent disk. SQLite lives in /tmp (ephemeral) and is re-seeded on every boot;
+# real settled sales are re-imported from docs/history.json; receipts are self-contained and signed.
 services:
   - type: web
     name: kitestall
     runtime: docker
-    plan: starter            # persistent disks need a paid instance type
+    plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
-    autoDeploy: true
-    disk:
-      name: kitestall-data
-      mountPath: /data
-      sizeGB: 1
+    autoDeploy: false   # manual deploys only: avoids burning free build minutes and surprise restarts during judging
     envVars:
       - { key: NODE_ENV, value: production }
-      - { key: DATABASE_PATH, value: /data/kitestall.db }
+      - { key: DATABASE_PATH, value: /tmp/kitestall.db }
       - { key: SERV_BASE_URL, value: "https://inference-api.openserv.ai/v1" }
       - { key: SERV_MODEL_NEGOTIATE, value: gpt-5.4-mini }
       - { key: SERV_MODEL_COMPILE, value: gpt-5.4-mini }

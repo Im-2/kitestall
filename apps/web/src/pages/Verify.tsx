@@ -13,14 +13,14 @@ export function Verify() {
   }
   useEffect(() => { if (id) check(id); /* eslint-disable-next-line */ }, []);
   return (
-    <div style={{ paddingTop: 22 }}>
-      <h1 style={{ fontSize: "2.2rem" }}>Verify a receipt</h1>
-      <p>Checks the signature, that every cited rule is in the shop's published policy, that the price is inside the public bounds, that the policy hash matches, and that the payment is on-chain. It never needs the private floor.</p>
+    <div>
+      <div className="app-top"><h1>Verify a receipt</h1>
+      <p>Checks the signature, that every cited rule is in the shop's published policy, that the price is inside the public bounds, that the policy hash matches, and that the payment is on-chain. It never needs the private floor.</p></div>
       <div className="grid2">
-        <div>
+        <div className="card">
           <label htmlFor="rid">Receipt ID</label><input id="rid" value={id} onChange={(e) => setId(e.target.value)} placeholder="rc_…" />
           <label htmlFor="rj">…or paste the receipt JSON</label><textarea id="rj" rows={8} className="mono" value={json} onChange={(e) => setJson(e.target.value)} />
-          <p><button className="btn" onClick={() => check()} disabled={busy || (!id && !json)}>{busy ? "Checking…" : "Verify"}</button></p>
+          <p><button className="btn primary" onClick={() => check()} disabled={busy || (!id && !json)}>{busy ? "Checking…" : "Verify"}</button></p>
           {err && <p className="err" role="alert">{err}</p>}
         </div>
         <div className="card" aria-live="polite">

@@ -17,6 +17,8 @@ export interface Deps {
   /** on-chain verification of the settled tx; injectable for tests */
   txCheck?: (hash: string, payTo: string, amountWei: string, asset: string) => Promise<Check>;
   staticDir?: string;
+  /** boot-time seed summary (computed once at startup) reported by the cheap /healthz */
+  boot?: { shops: number; items: number; sales: number };
 }
 
 const err = (c: Context, status: number, code: string, message: string, extra: object = {}) => c.json({ error: { code, message, ...extra } }, status as any);
@@ -68,7 +70,7 @@ export function createApp(d: Deps) {
   });
   app.onError((e, c) => { console.error("ERR", e.message); return err(c, 500, "internal", "Internal error"); });
 
-  app.get("/healthz", (c) => c.json({ ok: true, network: "kite-testnet" }));
+  app.get("/healthz", (c) => c.json({ ok: true, network: "kite-testnet", seeded: d.boot ?? null }));
 
   const shopRow = (sid: string) => row(db, "SELECT * FROM shops WHERE id=?", sid);
 
@@ -270,6 +272,17 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
       fees_accrued_cents: n("SELECT COALESCE(SUM(amount_cents),0) n FROM ledger_fees"), serv_latency_p50_ms: lat.length ? lat[Math.floor(lat.length / 2)] : null, serv_live_rounds: lat.length,
     });
   });
+  // Read-only public activity feed for the landing-page dashboard (redacted: no buyer text, no policy internals). Added for the UI redesign; existing endpoints are unchanged.
+  app.get("/api/public/activity", (c) => c.json({
+    testnet: true,
+    sales: rows(db, "SELECT o.id order_id, r.id receipt_id, o.shop_id, o.item_id, o.qty, o.total_cents, json_extract(r.json,'$.payment.tx_hash') tx_hash, json_extract(r.json,'$.payment.settled_via') settled_via, o.created_at FROM orders o JOIN receipts r ON r.order_id=o.id ORDER BY o.created_at DESC LIMIT 8"),
+    rounds: rows(db, "SELECT shop_id, round, status, ask_cents, guard, serv_status, concession, created_at FROM rounds ORDER BY id DESC LIMIT 12"),
+    fees: rows(db, "SELECT kind, SUM(amount_cents) cents, COUNT(*) n FROM ledger_fees GROUP BY kind"),
+    series: {
+      discount_pct: rows(db, "SELECT ROUND(100.0*(i.list_cents-q.unit_price_cents)/i.list_cents,1) v FROM quotes q JOIN items i ON i.shop_id=q.shop_id AND i.id=q.item_id ORDER BY q.created_at DESC LIMIT 20").map((x) => x.v).reverse(),
+      latency_ms: rows(db, "SELECT json_extract(serv_json,'$.latencyMs') v FROM rounds WHERE serv_status='live' AND serv_json IS NOT NULL ORDER BY id DESC LIMIT 20").map((x) => x.v).filter((v: unknown) => typeof v === "number").reverse(),
+    },
+  }));
   app.get("/api/arena/leaderboard", (c) => c.json({ leaders: rows(db, `SELECT q.id, q.shop_id, q.item_id, q.unit_price_cents, i.list_cents, ROUND(100.0*(i.list_cents-q.unit_price_cents)/i.list_cents,1) AS discount_pct, q.created_at FROM quotes q JOIN items i ON i.shop_id=q.shop_id AND i.id=q.item_id ORDER BY discount_pct DESC, q.created_at ASC LIMIT 10`) }));
   app.get("/api/arena/attacks", (c) => c.json({ attacks: rows(db, "SELECT shop_id, detail, created_at FROM events WHERE kind='attack' ORDER BY id DESC LIMIT 20").map((e) => ({ shop_id: e.shop_id, message: String(JSON.parse(e.detail).message).slice(0, 80), at: e.created_at })) }));
 
@@ -361,7 +374,7 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
 
   // ---------- static web ----------
   if (d.staticDir) {
-    app.use("/assets/*", serveStatic({ root: d.staticDir }));
+    app.use("*", serveStatic({ root: d.staticDir })); // real files (assets, logos, favicon); unknown paths fall through to the SPA index below
     app.get("*", async (c, next) => { if (/^\/(shops|api|owner|receipts|orders|healthz|\.well-known|llms)/.test(c.req.path)) return next(); return serveStatic({ root: d.staticDir, path: "index.html" })(c, next); });
   }
   return app;
