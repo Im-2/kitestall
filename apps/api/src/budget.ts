@@ -30,9 +30,10 @@ export function recordSpend(db: DB, kind: string, usd: number) {
   run(db, "INSERT INTO serv_spend(day,kind,usd,created_at) VALUES(?,?,?,?)", today(), kind, usd, now());
 }
 /** Cost charged for one SERV call. Zero when SERV was never called. */
-export function chargeFor(serv: { estCostUsd: number; tokens: number } | null, cfg: BudgetCfg): number {
+export function chargeFor(serv: { estCostUsd: number; tokens: number } | null, cfg: BudgetCfg, shadow = false): number {
   if (!serv) return 0;
-  return serv.tokens === 0 ? cfg.blockedCallUsd : serv.estCostUsd * cfg.multiplier;
+  // Shadow Agent adds validator calls that the response does not meter: charge double, conservatively
+  return (serv.tokens === 0 ? cfg.blockedCallUsd : serv.estCostUsd * cfg.multiplier) * (shadow ? 2 : 1);
 }
 
 export interface BudgetState {

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { sse, usd, EXPLORER, short } from "../lib";
 
-const LABEL: Record<string, string> = { signer: "Signer", discover: "Discover", offer: "Offer", counter: "Shop", quote: "Quote", payment_required: "402", paying: "Paying", budget_error: "Budget hit", walk_away: "Walk away", receipt: "Receipt", error: "Error", scenario: "Scenario", done: "Done" };
+const LABEL: Record<string, string> = { signer: "Signer", discover: "Discover", offer: "Offer", counter: "Shop", firm_quote_offer: "Firm quote", firm_quote: "Firm quote", quote: "Quote", payment_required: "402", paying: "Paying", budget_error: "Budget hit", walk_away: "Walk away", receipt: "Receipt", error: "Error", scenario: "Scenario", done: "Done" };
 
 export function Watch() {
   const [events, setEvents] = useState<any[]>([]); const [running, setRunning] = useState(false); const [scenario, setScenario] = useState("story-a"); const stop = useRef<null | (() => void)>(null);
@@ -16,7 +16,7 @@ export function Watch() {
       <p>A server-side demo shopper negotiates with Nomad Desk, then pays with a <b>real Kite testnet transaction</b>. It uses a <b>dev signer</b> (a funded testnet key), not a Kite Passport session, so the “session limit” in Story A is <b>simulated</b> and labeled as such.</p></div>
       <section className="card">
       <div className="row" style={{ alignItems: "flex-end", maxWidth: 620 }}>
-        <div><label htmlFor="sc">Scenario</label><select id="sc" value={scenario} onChange={(e) => setScenario(e.target.value)} disabled={running}><option value="story-a">Story A: meet in the middle (buyer limit vs seller floor)</option><option value="plain">Plain purchase</option></select></div>
+        <div><label htmlFor="sc">Scenario</label><select id="sc" value={scenario} onChange={(e) => setScenario(e.target.value)} disabled={running}><option value="story-a">Story A: meet in the middle (buyer limit vs seller floor)</option><option value="plain">Plain purchase</option><option value="firm">Paid firm quote: pay a 5-cent fee, get a fixed price, buy (no SERV)</option></select></div>
         <button className="btn" onClick={run} disabled={running}>{running ? "Running…" : "Run the demo shopper"}</button>
       </div>
       <p className="sm">Limited to 3 runs per 5 minutes. Each run spends testnet tokens from a demo wallet.</p>
@@ -31,6 +31,8 @@ export function Watch() {
               {e.type === "discover" && <>{e.shop}: {e.item}, list {usd(e.list_cents)}</>}
               {e.type === "offer" && <>Round {e.round}: offers <b>{usd(e.offer_cents)}</b> — “{e.message}”</>}
               {e.type === "counter" && <>{e.message} {e.serv?.guard === "blocked" && <span className="badge">guard block</span>} {e.rules_fired?.map((r: string) => <span className="chip" key={r}>{r}</span>)} {e.serv?.status === "live" ? <span className="badge ok">SERV</span> : e.serv?.status === "fallback" ? <span className="badge warn">fallback</span> : null}</>}
+              {e.type === "firm_quote_offer" && <>Firm price <b>{usd(e.unit_price_cents)}</b> for a <b>{usd(e.fee_cents)}</b> fee (valid {Math.round(e.valid_seconds / 60)} min). HTTP 402: pay <span className="mono">{(Number(BigInt(e.amount_wei) / 10n ** 14n) / 10000).toFixed(2)} PYUSD</span> to the platform wallet <span className="mono">{short(e.pay_to)}</span> <span className="badge">testnet</span></>}
+              {e.type === "firm_quote" && <>Fee paid. Signed firm quote <span className="mono">{e.firm_quote.firm_quote_id}</span>, {usd(e.firm_quote.unit_price_cents)} until {new Date(e.firm_quote.valid_until).toLocaleTimeString()}. Fee tx <a href={`${EXPLORER}/tx/${e.fee_tx}`} target="_blank" rel="noreferrer" className="mono">{short(e.fee_tx)}</a></>}
               {e.type === "quote" && <>Quote <span className="mono">{e.quote_id}</span>: <b>{usd(e.total_cents)}</b></>}
               {e.type === "payment_required" && <>HTTP 402: pay <span className="mono">{(Number(BigInt(e.amount_wei) / 10n ** 14n) / 10000).toFixed(2)} PYUSD</span> to <span className="mono">{short(e.pay_to)}</span> on Kite testnet</>}
               {e.type === "paying" && <>Signing EIP-3009 authorization… settling on-chain</>}

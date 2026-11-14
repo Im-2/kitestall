@@ -26,7 +26,8 @@ export function Arena() {
     load(0);
     return () => { alive = false; };
   }, [shop, tries]);
-  useEffect(() => { if (queued && item) { setQueued(false); void send(); } /* eslint-disable-next-line */ }, [queued, item]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- send() reads current form state; it must only fire when the shop becomes ready
+  useEffect(() => { if (queued && item) { setQueued(false); void send(); } }, [queued, item]);
   useEffect(() => { const stop = sse(`/api/trace/${session}/stream`, (e) => setTrace((t) => [...t.slice(-30), e])); return () => { stop(); }; }, [session]);
   const loadBoards = () => { api("/api/arena/leaderboard").then((r) => r.ok && setBoard(r.data.leaders)); api("/api/arena/attacks").then((r) => r.ok && setAttacks(r.data.attacks)); };
   useEffect(() => { loadBoards(); const t = setInterval(loadBoards, 20000); return () => clearInterval(t); }, []);

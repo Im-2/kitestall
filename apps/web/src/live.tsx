@@ -76,13 +76,13 @@ export function LiveDashboard({ compact = false }: { compact?: boolean }) {
               <tbody>{a.sales.slice(0, compact ? 3 : 5).map((x) => <tr key={x.order_id}><td>{x.shop_id}/{x.item_id}</td><td>{usd(x.total_cents)}</td>{!compact && <td className="mono">{short(x.tx_hash)}</td>}</tr>)}</tbody></table>
           )}
         </div>
-        {!compact || true ? <div>
+        <div>
           <div className="dh">Recent negotiations</div>
           {a.rounds.length === 0 ? <p className="empty">No rounds yet.</p> : (
             <table><thead><tr><th>Rd</th><th>Status</th><th>Ask</th></tr></thead>
               <tbody>{a.rounds.slice(0, compact ? 3 : 5).map((r, i) => <tr key={i}><td>{r.round}</td><td>{r.guard === "blocked" ? "blocked" : r.status}</td><td>{usd(r.ask_cents)}</td></tr>)}</tbody></table>
           )}
-        </div> : null}
+        </div>
       </div>
     </div>
   );

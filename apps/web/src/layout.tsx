@@ -14,11 +14,11 @@ export function SiteHeader({ route }: { route: string }) {
   useEffect(() => setOpen(false), [route]);
   useEffect(() => { // mobile sheet: lock page scroll, close on Escape or when the viewport grows to desktop, restore focus
     if (!open) return;
-    const prev = document.body.style.overflow; document.body.style.overflow = "hidden";
+    const prev = document.body.style.overflow; document.body.style.overflow = "hidden"; const opener = btn.current;
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     const mq = matchMedia("(min-width: 901px)"); const onMq = () => mq.matches && setOpen(false);
     addEventListener("keydown", onKey); mq.addEventListener("change", onMq);
-    return () => { document.body.style.overflow = prev; removeEventListener("keydown", onKey); mq.removeEventListener("change", onMq); btn.current?.focus(); };
+    return () => { document.body.style.overflow = prev; removeEventListener("keydown", onKey); mq.removeEventListener("change", onMq); opener?.focus(); };
   }, [open]);
   const link = (to: string, label: string, cls = "") => <a key={to} href={`#/${to}`} className={(route === to ? "on " : "") + cls} aria-current={route === to ? "page" : undefined}>{label}</a>;
   return (
@@ -63,7 +63,7 @@ export function SiteFooter() {
         </div>
         <div className="ftr-mid">
           <div><b style={{ color: "#fff" }}>Built on</b><br />Kite testnet (x402, PYUSD) and OpenServ SERV Reasoning.</div>
-          <div><b style={{ color: "#fff" }}>Honest by design</b><br />Fees are accrued, not collected. Payments use a labeled dev signer, not a Passport session.</div>
+          <div><b style={{ color: "#fff" }}>Honest by design</b><br />Platform fees are accrued, not collected; the optional 5-cent firm-quote fee is paid on-chain (testnet). Payments use a labeled dev signer, not a Passport session.</div>
           <div><b style={{ color: "#fff" }}>Hackathon</b><br />OpenServ SERV Hackathon Ed. 02, Track 02: Kite. MIT licensed.</div>
         </div>
         <div className="ftr-bot">

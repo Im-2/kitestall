@@ -72,3 +72,16 @@
 - Verify (live): signature ✓, rules_in_public_policy ✓, price_bounds ✓, policy_hash ✓, payment_tx_onchain ✓, amount_matches_price ✓
 - Raw stream: docs/evidence/live-story-a-2026-11-14.sse.txt
 
+## 2026-11-14T16:45:14.977Z — PAID FIRM QUOTE (x402 micro-fee) — nomad/day-pass — FEE + SALE SETTLED
+
+- Base URL: http://localhost:8787
+- Signer: dev signer (testnet EOA, no Passport session)
+- Firm quote: fq_90b4c314c0ba, unit price 2125c (list 2500c), valid until 2026-11-14T16:55:11.609Z, rules R-FIRM-QUOTE
+- **Fee**: 5c paid to the platform wallet 0x9E6219F8EEe17742838567F44e18875cCD41Cb39, settled via self-relay
+- Fee tx: 0xbde15220b4d50e064314b861a50ea5ef6018f318a52127afbb853a27b3c2e08a
+- Fee explorer: https://testnet.kitescan.ai/tx/0xbde15220b4d50e064314b861a50ea5ef6018f318a52127afbb853a27b3c2e08a
+- Purchase receipt: rc_1798bbad2a28 (rules R-FIRM-QUOTE,R-STOCK-OK,R-FLOOR-OK; SERV status none); settled via self-relay
+- Purchase tx: 0x4ca2fd77197c03a2049073878f533035c8ec8903e1f4b2eecf6f8181cfe7fcc7
+- Purchase explorer: https://testnet.kitescan.ai/tx/0x4ca2fd77197c03a2049073878f533035c8ec8903e1f4b2eecf6f8181cfe7fcc7
+- Verify: signature ✓, rules_in_public_policy ✓, price_bounds ✓, policy_hash ✓, payment_tx_onchain ✓, amount_matches_price ✓
+

@@ -53,7 +53,7 @@ export async function servChat(
   const tools: unknown[] = [{ type: "function", function: { name: "serv_prompt_guard" } }];
   if (cfg.shadow) {
     features.push("shadow");
-    tools.push({ type: "function", function: { name: "serv_shadow_agent", description: "Validate output.", parameters: { type: "object", properties: { hint: { type: "string", default: shadowHint ?? "Output must follow the schema." }, max_iterations: { type: "integer", default: 2 } } } } });
+    tools.push({ type: "function", function: { name: "serv_shadow_agent", description: "Validate output.", parameters: { type: "object", properties: { hint: { type: "string", default: shadowHint ?? "Output must follow the schema." }, max_iterations: { type: "integer", default: 1 } } } } });
   }
   if (cfg.multipath) features.push("multipath");
   if (cfg.kronos) features.push("kronos");
@@ -86,7 +86,8 @@ export async function servChat(
 
 /** Buyer text is untrusted: strip control/format chars, collapse whitespace, cap length. */
 export function sanitizeBuyerText(s: string | undefined | null, max = 300): string {
-  return (s ?? "").replace(/[\u0000-\u001f\u007f​-‏‪-‮⁠-⁤﻿]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+  // eslint-disable-next-line no-control-regex -- intentional: strip control characters and zero-width / bidi marks
+  return (s ?? "").replace(/[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2060-\u2064\ufeff]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 }
 
 export const DecisionSchemaJson = {

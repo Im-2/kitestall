@@ -8,7 +8,6 @@ const auth = { from: acct.address, to: payTo, value: "10000000000000000", validA
 const signature = await acct.signTypedData({ domain: { name: "PYUSD", version: "1", chainId: 2368, verifyingContract: asset },
   types: { TransferWithAuthorization: [{ name: "from", type: "address" }, { name: "to", type: "address" }, { name: "value", type: "uint256" }, { name: "validAfter", type: "uint256" }, { name: "validBefore", type: "uint256" }, { name: "nonce", type: "bytes32" }] },
   primaryType: "TransferWithAuthorization", message: { ...auth, value: BigInt(auth.value), validAfter: BigInt(auth.validAfter), validBefore: BigInt(auth.validBefore) } });
-const req = { scheme: "gokite-aa", network: "kite-testnet", maxAmountRequired: auth.value, resource: "https://x/y", description: "d", mimeType: "application/json", payTo, maxTimeoutSeconds: 300, asset, extra: null, merchantName: "t" };
 const tries = [
   ["POST", "/v2/settle", { authorization: auth, signature, network: "kite-testnet" }],
   ["POST", "/v2/settle", { authorization: auth, signature, network: "eip155:2368" }],

@@ -12,6 +12,10 @@ Can you talk a shopkeeper agent below its floor? We ran 45 attacks on live SERV 
 Try it (Kite testnet): https://kitestall.onrender.com/#/arena
 https://github.com/Im-2/kitestall @openservai #BuildonSERV #SERV
 
+**D**
+Revenue for a storefront agent, for real (testnet): a 5-cent x402 "firm quote": pay the fee on @gokite_ai, get a signed fixed price valid for 10 minutes, then buy. Fee tx on Kitescan, receipts verify ✓✓✓. Built for the SERV Hackathon (Kite track).
+https://kitestall.onrender.com @openservai #BuildonSERV #SERV
+
 **C**
 Buyer's budget meets seller's floor: our shopper agent hits a session limit mid-checkout, tells the shop its hard budget, renegotiates, and pays. Real Kite testnet tx, signed receipt, ✓✓✓ on /verify. Built for the SERV Hackathon (Kite track).
 <VIDEO_URL> · https://kitestall.onrender.com @openservai #BuildonSERV #SERV

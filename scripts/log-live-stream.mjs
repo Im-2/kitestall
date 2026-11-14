@@ -10,6 +10,6 @@ if (be) md += `- Session-limit error (simulated): requested ${be.requested_cents
 md += `- Rounds: ${counters.length}; Prompt Guard blocks: ${counters.filter((e) => e.serv?.guard === "blocked").length}; SERV statuses: ${[...new Set(counters.map((e) => e.serv?.status))].join(", ")}\n`;
 if (rc) {
   const v = await (await fetch(`${base}/receipts/${rc.receipt.receipt_id}/verify`)).json();
-  md += `- Agreed unit price: ${rc.receipt.agreed_price_cents} cents (list ${rc.receipt.list_price_cents}); rules: ${rc.receipt.rules_fired.join(", ")}\n- Receipt: ${rc.receipt.receipt_id}; settled via: ${rc.receipt.payment.settled_via}; SERV request ids: ${rc.receipt.serv.request_ids.length}\n- Tx: ${rc.tx_hash}\n- Explorer: https://testnet.kitescan.ai/tx/${rc.tx_hash}\n- Verify (live): ${v.checks.map((c) => `${c.name} ${c.ok ? "✓" : "✗"}`).join(", ")}\n- Raw stream: docs/evidence/${file.split(/[\/]/).pop()}\n`;
+  md += `- Agreed unit price: ${rc.receipt.agreed_price_cents} cents (list ${rc.receipt.list_price_cents}); rules: ${rc.receipt.rules_fired.join(", ")}\n- Receipt: ${rc.receipt.receipt_id}; settled via: ${rc.receipt.payment.settled_via}; SERV request ids: ${rc.receipt.serv.request_ids.length}\n- Tx: ${rc.tx_hash}\n- Explorer: https://testnet.kitescan.ai/tx/${rc.tx_hash}\n- Verify (live): ${v.checks.map((c) => `${c.name} ${c.ok ? "✓" : "✗"}`).join(", ")}\n- Raw stream: docs/evidence/${file.split(/[\\/]/).pop()}\n`;
 }
 appendFileSync("docs/E2E_LOG.md", md + "\n"); console.log("logged");

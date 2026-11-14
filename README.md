@@ -4,7 +4,7 @@
 
 Most Kite agents are the *buyer's*. Kitestall is the *seller's*: a shop publishes a price policy, a SERV Reasoning agent negotiates with shopper agents, the agreed price rides inside an x402 `402 Payment Required`, and every sale ends with an ed25519-signed receipt that cites the public rules that produced the price, verifiable without the private floor.
 
-> **Everything here is Kite TESTNET.** No real money. Fees are accrued in a ledger, not collected. OpenServ SERV Hackathon Edition 02, **Track 02: Kite**.
+> **Everything here is Kite TESTNET.** No real money. Platform and per-round fees are accrued in a ledger, not collected; the optional 5-cent firm-quote fee is really paid on-chain (testnet) and recorded as collected. Payments use a **dev signer**, not a Kite Passport session. OpenServ SERV Hackathon Edition 02, **Track 02: Kite**.
 
 - Repo: https://github.com/Im-2/kitestall · Live demo: https://kitestall.onrender.com (Render free plan: first request after idle takes ~1 min to wake)
 - Proof it works: [docs/E2E_LOG.md](docs/E2E_LOG.md) (real testnet settlements, tx hashes, verify results) · [docs/BENCHMARKS.md](docs/BENCHMARKS.md) (generated: adversarial suite, latency, cost)
@@ -28,7 +28,7 @@ pnpm install
 cp .env.example .env        # add OPENSERV_API_KEY, wallets (see scripts/gen-wallets.mjs), OWNER_TOKEN
 node scripts/gen-wallets.mjs   # generates 3 testnet wallets into .env (prints addresses only)
 pnpm build && pnpm start       # http://localhost:8787  (API + web, seeds two shops)
-pnpm check                     # typecheck + unit + integration tests
+pnpm check                     # lint + typecheck + unit + integration tests
 ```
 Fund the demo shopper with testnet KITE from https://faucet.gokite.ai (reCAPTCHA, manual), then `node scripts/claim-token.mjs` (self-claims 10 testnet PYUSD per call). Run a real purchase:
 ```bash
@@ -49,8 +49,8 @@ Details and honest caveats in [docs/SERV_NOTES.md](docs/SERV_NOTES.md).
 - **Prompt Guard** on every buyer-authored string; a block never advances the round and is never retried without the guard.
 - **Strict JSON schema** (enums + strings only): the model picks `action` and `concession` (none/tiny/small/medium/large) and writes a short message. It never sees the floor and never outputs a price.
 - **Multipath** (`-serv-multipath`) for persona plus competing public rules.
-- **Shadow Agent** is implemented behind `SERV_SHADOW=1` but **off by default** (it roughly doubled latency in our bench; code-side validation already enforces every rule).
-- **Kronos** was not successfully benchmarked; not used.
+- **Shadow Agent** (`serv_shadow_agent`, 1 validation iteration) runs **only for the server-side demo shopper on the Watch page, and only on accept-candidate or final-round decisions** (offer within 5% of the ask, or the last round). It is **off for the public Arena**, enforced by a per-boot secret header and covered by tests; the budget counter charges shadowed rounds double. Receipts list `shadow` in their SERV features only when it actually ran. Cost/latency: roughly doubled latency (one live check: 10.4 s for a shadowed round); disable with `DEMO_SHADOW=0`.
+- **Kronos was not measured** (the benchmark attempts failed: a wrong model id, then insufficient credits). We make no Kronos claims and do not use it.
 - **Policy compile**: plain English → structured draft, zod-validated, owner approves after 5 simulated haggles.
 - Every receipt records SERV request ids and whether each round was `live` or `fallback`. Fallback rounds are labeled and never claimed as SERV decisions.
 
@@ -58,6 +58,9 @@ Details and honest caveats in [docs/SERV_NOTES.md](docs/SERV_NOTES.md).
 - **x402**: `/checkout` returns a 402 whose `amount` is exactly the quote in wei (testnet **PYUSD**, 18 decimals, chain `eip155:2368`). The shopper signs an EIP-3009 `transferWithAuthorization`; the server checks payee/amount/asset/nonce, calls the **Pieverse facilitator** `/v2/verify`, then settles.
 - **Honest finding:** Pieverse `/v2/settle` returned `transaction_failed` for every PYUSD authorization we tried (details in [docs/DISCOVERY.md](docs/DISCOVERY.md)). So the server falls back to **self-relay**: it submits the signed `transferWithAuthorization` itself (gas paid by the relayer). Receipts record `settled_via`. All 5 recorded sales settled via self-relay (4 in `docs/history.json`, plus the live Story A run of 2026-11-14, `docs/E2E_LOG.md`).
 - **Signer used: dev signer** (a funded testnet EOA). **No Kite Passport session was used**, so Passport enforcement is *not* claimed. Story A's "session limit" is a **simulated** per-transaction cap enforced by the dev signer, labeled as such in the UI and logs. The signer sits behind a `PaymentSigner` interface so a `kpass`/Passport signer can be plugged in.
+
+## Shop with your own agent
+Step-by-step (curl flow, copy-paste example agent, paid firm quote, verification) and what is NOT available (no MCP server, no Passport): [docs/SHOP_WITH_YOUR_AGENT.md](docs/SHOP_WITH_YOUR_AGENT.md).
 
 ## Final round: best and final
 In the last round the shop computes in code a best-and-final price (the floor plus 10% of the remaining headroom, never below the floor) and accepts any offer at or above it, at the buyer's offer, citing the public rule **R-FINAL-ACCEPT** (listed in every published policy and in receipts). It never accepts at exactly the floor, and the model never sees the floor or the price. A buyer who gets a best-and-final counter can take it in one more message, which is decided by code with no SERV call.
@@ -75,7 +78,10 @@ In the last round the shop computes in code a best-and-final price (the floor pl
 
 **Adversarial results** (live SERV, see BENCHMARKS.md for the generated table): 45 attacks and 41 benign messages replayed for up to 3 rounds each: **0 floor breaches, 0 leaks**. Prompt Guard blocked 73% of attacks and flagged 22% (9/41) of benign messages, counting a message if any of its up-to-3 replays was blocked; on a separate fixed set of 16 benign messages (one call each) the production prompt had **0/16** blocks and two alternative prompts 1/16 each (`docs/BENCHMARKS.md`). It is non-deterministic. The guard is never weakened or retried; a flagged message gets a friendly "try rephrasing" notice and does not use a round. The rest is contained by code, not by the guard.
 
-## Revenue model (accounting only)
+## Revenue model
+**Paid firm quote (real, testnet):** `POST /shops/:shop/firm-quote` costs 5 cents (testnet PYUSD, x402 `402`, paid through the same checkout and self-relay path to a platform wallet) and returns a signed price valid for 10 minutes, derived only from public numbers. The fee is recorded in the ledger as **collected** (one real paid call is logged in `docs/E2E_LOG.md`, shown on the owner dashboard).
+
+**Accounting only:**
 `platform_fee_bps` = 100 (1% of settled sales) and `quote_fee_cents` = 1 after 10 free rounds/day per buyer, written to `ledger_fees` and shown in the owner dashboard. **Accrued, not auto-collected.** Measured inputs: estimated SERV inference cost ≈ **$0.002 per 3-round negotiation** (token usage × catalog price; excludes SERV feature surcharges, `docs/BENCHMARKS.md`). The owner-read console balance fell from $2.03 to $2.01 over 7 live requests (rounded to the cent), about $0.003 per request all-in. Settlement options (split payment, invoice, paid firm quotes via x402) are roadmap.
 
 ## Verify a receipt
@@ -94,7 +100,7 @@ SERV credits are finite ($2 in total for this project). OpenServ exposes no bala
 Testnet only. **Kite Passport/kpass not used**: sign-up needs the owner's email and passkey, and Passport pays USDC.e on Kite *mainnet* with real money, so it cannot pay our testnet PYUSD checkout (details in `docs/DISCOVERY.md`). Pieverse settle failing (self-relay used). Owner auth is a single bearer token; private policy and signing keys live in SQLite on the server. Seed floors in `packages/core/src/seed.ts` are public demo defaults (deployments get random salts and can override floors via `FLOOR_PCT_<SHOP>`), so the Arena tests the model/API path, not secrecy of those defaults. Prompt Guard false positives (~22% in our run) can block benign buyers; they cost no round. Live-site data is ephemeral on the free plan (see Free-tier limits). SERV credits are finite: when exhausted the shop runs in labeled fallback mode.
 
 ## Roadmap
-Passport signer via `kpass`; real fee collection (split payment); third seed shop; paid firm-quote endpoint over x402; merchant-side Passport verification when an API exists.
+Passport signer via `kpass` (blocked today: needs the owner's email/passkey and pays mainnet USDC.e); collecting the platform fee by split payment; a third seed shop; merchant-side Passport verification when an API exists.
 
 ## Reuse disclosure
 This is a new repo created during the hackathon. No code was reused from earlier projects.

@@ -11,7 +11,8 @@ export function Verify() {
     else { let body: any; try { body = JSON.parse(json); } catch { setErr("That is not valid JSON."); setBusy(false); return; } r = await api("/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ receipt: body }) }); }
     setBusy(false); if (!r.ok && !r.data?.checks) setErr(r.data?.error?.message ?? "Verification failed"); else setRes(r.data);
   }
-  useEffect(() => { if (id) check(id); /* eslint-disable-next-line */ }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount with the id from the URL
+  useEffect(() => { if (id) check(id); }, []);
   return (
     <div>
       <div className="app-top"><h1>Verify a receipt</h1>

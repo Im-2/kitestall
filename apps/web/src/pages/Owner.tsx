@@ -20,7 +20,8 @@ export function Owner() {
     const l = await api("/owner/ledger", { headers: H }); if (l.ok) setLedger(l.data); else if (l.status === 401) setLedger(null);
     const n = await api("/owner/negotiations", { headers: H }); if (n.ok) setNegs(n.data.rounds);
   }
-  useEffect(() => { if (token) { refresh(); const t = setInterval(refresh, 15000); return () => clearInterval(t); } /* eslint-disable-next-line */ }, [token]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh closes over the token and is re-created each render; poll only when the token changes
+  useEffect(() => { if (token) { refresh(); const t = setInterval(refresh, 15000); return () => clearInterval(t); } }, [token]);
 
   async function compile() { setBusy("compile"); setMsg(""); setPreview(null); const r = await api("/owner/policy/compile", { method: "POST", headers: H, body: JSON.stringify({ english }) }); setBusy(""); if (r.ok) setCompiled(r.data); else { setCompiled(null); setMsg(r.status === 401 ? "Owner token is missing or wrong." : `Could not compile: ${r.data?.error?.message ?? r.data?.error ?? "unknown"}${r.data?.issues ? " — " + JSON.stringify(r.data.issues).slice(0, 200) : ""}`); } }
   async function runPreview() { setBusy("preview"); const r = await api("/owner/policy/preview", { method: "POST", headers: H, body: JSON.stringify({ draft: compiled.draft, shop_id: shop }) }); setBusy(""); if (r.ok) setPreview(r.data); else setMsg(r.data?.error?.message ?? "Preview failed"); }
@@ -80,6 +81,8 @@ export function Owner() {
           {!ledger ? <p className="empty">Ledger unavailable (check the token).</p> : <>
             <p className="sm">{ledger.note}</p>
             <p>Fees accrued: {ledger.fees.length ? ledger.fees.map((f: any) => <span className="chip" key={f.kind}>{f.kind}: {usd(f.cents)} ({f.n})</span>) : <span className="empty">none yet</span>}</p>
+            <p>Fees collected on-chain (testnet): {ledger.collected?.length ? ledger.collected.map((f: any) => <span className="chip" key={f.kind}>{f.kind}: {usd(f.cents)} ({f.n})</span>) : <span className="empty">none yet</span>}</p>
+            {ledger.firm_quotes?.length > 0 && <div className="tablewrap"><table><thead><tr><th>Firm quote</th><th>Item</th><th>Price</th><th>Fee</th><th>Fee tx</th></tr></thead><tbody>{ledger.firm_quotes.slice(0, 8).map((f: any) => <tr key={f.firm_quote_id}><td className="mono">{f.firm_quote_id}</td><td>{f.item_id} ×{f.qty}</td><td>{usd(f.unit_price_cents)}</td><td>{usd(f.amount_cents)}</td><td>{f.tx_hash ? <a href={f.explorer_url} target="_blank" rel="noreferrer" className="mono">{short(f.tx_hash)}</a> : "—"}</td></tr>)}</tbody></table></div>}
             {ledger.needs_reconcile.length > 0 ? <p className="err" role="alert">Needs reconcile: {ledger.needs_reconcile.length} payment(s) settled or unknown on-chain without fulfilment.</p> : <p className="sm">Needs reconcile: <b>none</b> (every verified payment has an order).</p>}
             {ledger.sales.length === 0 ? <p className="empty">No settled sales yet.</p> : <div className="tablewrap"><table><thead><tr><th>When</th><th>Shop</th><th>Item</th><th>Total</th><th>Tx</th><th>Receipt</th></tr></thead><tbody>{ledger.sales.map((s: any) => <tr key={s.order_id}><td>{new Date(s.created_at).toLocaleString()}</td><td>{s.shop_id}</td><td>{s.item_id} ×{s.qty}</td><td>{usd(s.total_cents)}</td><td><a href={`${EXPLORER}/tx/${s.tx_hash}`} target="_blank" rel="noreferrer" className="mono">{short(s.tx_hash)}</a></td><td><a href={`#/verify?id=${s.receipt_id}`}>verify</a></td></tr>)}</tbody></table></div>}
           </>}
