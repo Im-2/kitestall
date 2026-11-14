@@ -1,0 +1,42 @@
+data: {"type":"scenario","scenario":"story-a","simulated_session_cap_cents":2250,"note":"Session cap is SIMULATED by the dev signer (no Passport session)."}
+
+data: {"type":"signer","ts":"2026-11-14T16:21:05.886Z","kind":"dev-signer","label":"dev signer (testnet EOA, no Passport session)","payer":"0xA03C4b33c55da051f0D4dBFA12fF05Ddb227a29f"}
+
+data: {"type":"discover","ts":"2026-11-14T16:21:05.892Z","shop":"Nomad Desk","item":"Coworking day pass","list_cents":2500,"testnet":true}
+
+data: {"type":"offer","ts":"2026-11-14T16:21:05.892Z","round":1,"offer_cents":1750,"message":"Hi! I'd like to buy this. Can you do a bit better than list?"}
+
+data: {"type":"counter","ts":"2026-11-14T16:21:08.661Z","round":1,"status":"counter","ask_cents":2450,"message":"Thanks for your interest — I can do a little better than list on this one. If you'd like, send your best offer and I’ll see what I can do. My ask is $24.50.","rules_fired":["R-PG-CLEAN","R-FINAL-ACCEPT","R-STOCK-OK"],"serv":{"status":"live","guard":"clean","model":"gpt-5.4-mini-serv-multipath","features":["prompt_guard","schema","multipath"],"request_id":"chatcmpl-EkAmyeoIJQlRhCnAg7UzJ63peJOon","latency_ms":2756,"budget_capped":false}}
+
+data: {"type":"offer","ts":"2026-11-14T16:21:08.661Z","round":2,"offer_cents":2450,"message":"Can we meet in the middle?"}
+
+data: {"type":"counter","ts":"2026-11-14T16:21:11.856Z","round":2,"status":"accepted","ask_cents":2450,"message":"I can nudge a little, but not all the way there just yet. If you’d like, I can keep working with you on this. Agreed at $24.50.","rules_fired":["R-PG-CLEAN","R-STOCK-OK","R-FLOOR-OK"],"serv":{"status":"live","guard":"clean","model":"gpt-5.4-mini-serv-multipath","features":["prompt_guard","schema","multipath"],"request_id":"chatcmpl-EkAn1Jq7Fs16QCEwGYXiOrxl2tw4A","latency_ms":3185,"budget_capped":false}}
+
+data: {"type":"quote","ts":"2026-11-14T16:21:11.856Z","quote_id":"q_d2fa4b7a580b","price_cents":2450,"total_cents":2450,"expires_at":"2026-11-14T16:26:11.854Z"}
+
+data: {"type":"payment_required","ts":"2026-11-14T16:21:11.861Z","amount_wei":"24500000000000000000","pay_to":"0x8D06Dd5D6b9B634ade658ea5ab9c262e6787d8bb","network":"eip155:2368","asset":"0x8E04D099b1a8Dd20E6caD4b2Ab2B405B98242ec9","quote_id":"q_d2fa4b7a580b"}
+
+data: {"type":"budget_error","ts":"2026-11-14T16:21:11.861Z","code":"InsufficientBudget","limit_cents":2250,"requested_cents":2450,"signer":"dev signer (testnet EOA, no Passport session)"}
+
+data: {"type":"offer","ts":"2026-11-14T16:21:11.861Z","round":1,"offer_cents":2250,"message":"My hard spending limit is $22.50 per unit. Can you work within that?"}
+
+data: {"type":"counter","ts":"2026-11-14T16:21:15.392Z","round":1,"status":"counter","ask_cents":2450,"message":"I can come down a bit on a day pass, but I can’t match that level yet. If you can move closer, I’ll keep working with you. My ask is $24.50.","rules_fired":["R-PG-CLEAN","R-CAP-30","R-STOCK-OK"],"serv":{"status":"live","guard":"clean","model":"gpt-5.4-mini-serv-multipath","features":["prompt_guard","schema","multipath"],"request_id":"chatcmpl-EkAn44ZTnt71XuXN5kt38wXpn6t0q","latency_ms":3512,"budget_capped":false}}
+
+data: {"type":"offer","ts":"2026-11-14T16:21:15.392Z","round":2,"offer_cents":2250,"message":"My hard spending limit is $22.50 per unit. Can you work within that?"}
+
+data: {"type":"counter","ts":"2026-11-14T16:21:19.715Z","round":2,"status":"counter","ask_cents":2338,"message":"I can come down a bit and keep the conversation moving. If you can move up a touch, I should be able to meet you there. My ask is $23.38.","rules_fired":["R-PG-CLEAN","R-FINAL-ACCEPT","R-STOCK-OK"],"serv":{"status":"live","guard":"clean","model":"gpt-5.4-mini-serv-multipath","features":["prompt_guard","schema","multipath"],"request_id":"chatcmpl-EkAn9xwJja8ofpiXO8OLKxT87dW6v","latency_ms":4303,"budget_capped":false}}
+
+data: {"type":"offer","ts":"2026-11-14T16:21:19.715Z","round":3,"offer_cents":2250,"message":"My hard spending limit is $22.50 per unit. Can you work within that?"}
+
+data: {"type":"counter","ts":"2026-11-14T16:21:22.158Z","round":3,"status":"accepted","ask_cents":2250,"message":"Happy to do that and lock it in for you. Thanks for working with me on this. Agreed at $22.50.","rules_fired":["R-PG-CLEAN","R-FINAL-ACCEPT","R-STOCK-OK","R-ROUND-CAP","R-FINAL-ACCEPT","R-FLOOR-OK"],"serv":{"status":"live","guard":"clean","model":"gpt-5.4-mini-serv-multipath","features":["prompt_guard","schema","multipath"],"request_id":"chatcmpl-EkAnBWI0wpXcnwzqvO91PVyeCWiUP","latency_ms":2422,"budget_capped":false}}
+
+data: {"type":"quote","ts":"2026-11-14T16:21:22.158Z","quote_id":"q_7484fffff25d","price_cents":2250,"total_cents":2250,"expires_at":"2026-11-14T16:26:22.156Z"}
+
+data: {"type":"payment_required","ts":"2026-11-14T16:21:22.161Z","amount_wei":"22500000000000000000","pay_to":"0x8D06Dd5D6b9B634ade658ea5ab9c262e6787d8bb","network":"eip155:2368","asset":"0x8E04D099b1a8Dd20E6caD4b2Ab2B405B98242ec9","quote_id":"q_7484fffff25d"}
+
+data: {"type":"paying","ts":"2026-11-14T16:21:22.231Z","payer":"0xA03C4b33c55da051f0D4dBFA12fF05Ddb227a29f","signer":"dev signer (testnet EOA, no Passport session)"}
+
+data: {"type":"receipt","ts":"2026-11-14T16:21:25.715Z","receipt":{"receipt_id":"rc_dd819f9c3b40","shop_id":"nomad","item":{"id":"day-pass","qty":1},"list_price_cents":2500,"agreed_price_cents":2250,"rounds":3,"rules_fired":["R-PG-CLEAN","R-CAP-30","R-STOCK-OK","R-FINAL-ACCEPT","R-ROUND-CAP","R-FLOOR-OK"],"policy":{"version":2,"hash":"sha256:51462386408358274f6fde3f2d212c11728c06edd41543b24ead500cfeb4b16a"},"serv":{"model":"gpt-5.4-mini-serv-multipath","features":["prompt_guard","schema","multipath"],"request_ids":["chatcmpl-EkAn44ZTnt71XuXN5kt38wXpn6t0q","chatcmpl-EkAn9xwJja8ofpiXO8OLKxT87dW6v","chatcmpl-EkAnBWI0wpXcnwzqvO91PVyeCWiUP"],"status":"live"},"payment":{"network":"kite-testnet","tx_hash":"0xfe5b534ad9d982a96d30154dbee28cb1600323bf93936a669d2738c6f65c0c51","payer":"0xA03C4b33c55da051f0D4dBFA12fF05Ddb227a29f","pay_to":"0x8D06Dd5D6b9B634ade658ea5ab9c262e6787d8bb","amount_wei":"22500000000000000000","settled_via":"self-relay"},"passport":{"status":"not_verified_by_merchant"},"issued_at":"2026-11-14T16:21:25.706Z","signature":"ed25519:J_-F40hgfMoD3Bl2GRErx8ttCxO8iGqY8v4r5e8G9M21gHZydLYeK_F3r3qN7ZB3H5fqyKnNquApyf3ZKTh6Cw"},"order":{"id":"o_548476234d52","quote_id":"q_7484fffff25d","shop_id":"nomad","item_id":"day-pass","qty":1,"total_cents":2250,"voucher":"KS-1BED9B8C","created_at":"2026-11-14T16:21:25.706Z"},"tx_hash":"0xfe5b534ad9d982a96d30154dbee28cb1600323bf93936a669d2738c6f65c0c51","explorer":"https://testnet.kitescan.ai/tx/0xfe5b534ad9d982a96d30154dbee28cb1600323bf93936a669d2738c6f65c0c51"}
+
+data: {"type":"done","ok":true}
+

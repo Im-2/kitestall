@@ -59,3 +59,16 @@
 - Explorer: https://testnet.kitescan.ai/tx/0xf8ddeba47a9555d267b5bf7b42cf5a0a825e1ca8301554ae9335981428fd7405
 - Verify: signature ✓, rules_in_public_policy ✓, price_bounds ✓, policy_hash ✓, payment_tx_onchain ✓, amount_matches_price ✓
 
+## 2026-11-14T16:21:25.715Z — LIVE site run, scenario `story-a` (demo shopper SSE stream) — SETTLED
+
+- Base URL: https://kitestall.onrender.com
+- Signer: dev signer (no Passport session); session cap 2250c is SIMULATED
+- Session-limit error (simulated): requested 2450c > cap 2250c → shopper renegotiated
+- Rounds: 5; Prompt Guard blocks: 0; SERV statuses: live
+- Agreed unit price: 2250 cents (list 2500); rules: R-PG-CLEAN, R-CAP-30, R-STOCK-OK, R-FINAL-ACCEPT, R-ROUND-CAP, R-FLOOR-OK
+- Receipt: rc_dd819f9c3b40; settled via: self-relay; SERV request ids: 3
+- Tx: 0xfe5b534ad9d982a96d30154dbee28cb1600323bf93936a669d2738c6f65c0c51
+- Explorer: https://testnet.kitescan.ai/tx/0xfe5b534ad9d982a96d30154dbee28cb1600323bf93936a669d2738c6f65c0c51
+- Verify (live): signature ✓, rules_in_public_policy ✓, price_bounds ✓, policy_hash ✓, payment_tx_onchain ✓, amount_matches_price ✓
+- Raw stream: docs/evidence/live-story-a-2026-11-14.sse.txt
+

@@ -13,8 +13,8 @@ Kitestall is the seller's agent on Kite. A shop publishes a price policy; a stor
 - Receipts carry SERV request ids and a live/fallback status; fallback rounds are never claimed as SERV decisions.
 
 ## What's new and working (all Kite testnet)
-- 4 real settled testnet sales (2 shops; 3 logged in `docs/E2E_LOG.md` incl. a buyer-budget renegotiation, plus 1 made through the web UI, recorded in `docs/history.json`): every receipt passes all six verify checks on the live site.
-- Adversarial suite on live SERV: 45 attacks + 41 benign messages: **0 floor breaches, 0 leaks**; Prompt Guard blocked 73% of attacks with a 22% benign false-positive rate (`docs/BENCHMARKS.md`).
+- 5 real settled testnet sales on 2 shops, tx hashes in `docs/E2E_LOG.md` and `docs/history.json`; the latest is a live Story A run on the deployed site (simulated buyer limit hit, renegotiated, settled at $22.50 via the final-round rule). Every receipt passes all six verify checks on the live site.
+- Adversarial suite on live SERV: 45 attacks + 41 benign messages: **0 floor breaches, 0 leaks**; Prompt Guard blocked 73% of attacks; 22% of benign messages were flagged in that run (per message over up to 3 replays), 0/16 on a fixed single-call set. Flagged messages get a friendly retry notice (`docs/BENCHMARKS.md`).
 - Arena with live rule trace, owner dashboard (English → "what I understood" → 5 simulated haggles → publish), sales ledger, signed receipts, agent-readable `/llms.txt`.
 
 ## Revenue
@@ -24,4 +24,4 @@ Accrued platform fee (1% of settled sales) and per-round quote fee after a free 
 Arena: `https://kitestall.onrender.com/#/arena` — try to haggle below the floor. Shopper agent: `https://kitestall.onrender.com/#/watch`. Open a stall: `https://kitestall.onrender.com/#/owner`.
 
 ## Honest limits
-Testnet only. No Kite Passport session was used: payments use a labeled dev signer, and Story A's session limit is simulated. Pieverse `/v2/settle` returned `transaction_failed` for our PYUSD authorizations, so settlement used a self-relay fallback (recorded in each receipt). Owner auth is a bearer token. Prompt Guard is non-deterministic and had false positives. Repo is new; no code reused.
+Testnet only. No Kite Passport session was used: payments use a labeled dev signer, and Story A's session limit is simulated. Pieverse `/v2/settle` returned `transaction_failed` for our PYUSD authorizations, so settlement used a self-relay fallback (recorded in each receipt). Owner auth is a bearer token. Prompt Guard is non-deterministic and had false positives. Kite Passport was not used (it needs the owner's email/passkey and pays mainnet USDC.e, not our testnet PYUSD). Repo is new; no code reused.

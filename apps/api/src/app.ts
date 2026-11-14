@@ -12,6 +12,7 @@ import {
 } from "@kitestall/core";
 import { runShopper } from "@kitestall/shopper";
 import { now, row, rows, run, tx, type DB } from "./db.ts";
+import { exportHistory } from "./history.ts";
 import { budgetCfg, budgetState, chargeFor, initBudget, recordSpend } from "./budget.ts";
 
 export interface Deps {
@@ -362,6 +363,7 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
   });
   app.post("/owner/policy/compile", async (c) => {
     const b = await c.req.json().catch(() => null); const english = b?.english; if (typeof english !== "string" || english.length < 20) return err(c, 400, "bad_request", "english policy text required");
+    if (d.serv.mode === "fallback_only") return c.json({ ok: false, error: "Policy compile needs live SERV (this server runs SERV_MODE=fallback_only)." }, 503);
     const bs = budgetState(db, bcfg); if (bs.capped) return c.json({ ok: false, error: `SERV budget reached (${bs.reason}); policy compile is unavailable right now.` }, 429);
     const res = await compilePolicy(d.serv, english);
     recordSpend(db, "compile", chargeFor({ estCostUsd: estimateCostUsd(res.call.model.replace(/-serv-.*/, ""), res.call.usage), tokens: res.call.usage.total }, bcfg));
@@ -395,6 +397,7 @@ Shopper CLI: kitestall-shopper in packages/shopper. All money is testnet.
     fees: rows(db, "SELECT kind, SUM(amount_cents) cents, COUNT(*) n FROM ledger_fees GROUP BY kind"),
     needs_reconcile: rows(db, "SELECT p.*, q.shop_id FROM payments p JOIN quotes q ON q.id=p.quote_id WHERE p.status IN ('needs_reconcile','settle_unknown')"),
   }));
+  app.get("/owner/export-history", (c) => c.json(exportHistory(db))); // owner-only (token middleware): real sales + public policies, no private parts
   app.get("/owner/negotiations", (c) => c.json({ rounds: rows(db, "SELECT session_id, shop_id, round, offer_cents, status, ask_cents, guard, serv_status, concession, rules_json, substr(buyer_message,1,120) buyer_message, message, created_at FROM rounds ORDER BY id DESC LIMIT 100") }));
 
   // ---------- static web ----------

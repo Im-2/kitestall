@@ -185,3 +185,35 @@ describe("final-round rule R-FINAL-ACCEPT (code-computed best-and-final)", () =>
     expect(r4.status).toBe("rejected");
   });
 });
+
+describe("owner export of real sales (keeps live sales across free-plan restarts)", () => {
+  it("is owner-only and contains no private policy part", async () => {
+    const db = openDb(":memory:"); seed(db, env); const f = fileURLToPath(new URL("../../../docs/history.json", import.meta.url)); importHistory(db, f);
+    const app = createApp({ db, env, facilitator: fac, serv: { baseUrl: "", apiKey: "", model: "m", mode: "fallback_only" } });
+    expect((await app.request("/owner/export-history")).status).toBe(401);
+    const r = await app.request("/owner/export-history", { headers: { authorization: "Bearer tok" } }); const txt = await r.text(); const j = JSON.parse(txt);
+    expect(j.sales.length).toBeGreaterThanOrEqual(4); expect(txt).not.toMatch(/private_json|salt|default_pct_of_list/); expect(j.policies.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("owner flow without SERV: preview, publish (policy versioning), compile guard", () => {
+  const H = { authorization: "Bearer tok", "content-type": "application/json" };
+  const draft = { persona: "friendly", max_discount_pct: 25, floor_default_pct: 78, max_rounds: 3, rules: [{ id: "R-BULK-10", kind: "volume_tier", text: "10% off 4 or more." }], understood: ["10% off 4+", "never below 78%"] };
+  it("compile refuses (503) in fallback_only instead of silently spending SERV credits", async () => {
+    const t = mk2(); const r = await t.app.request("/owner/policy/compile", { method: "POST", headers: H, body: JSON.stringify({ english: "We sell bread. Give 10% off for 4 or more loaves. Never below 78% of list." }) });
+    expect(r.status).toBe(503);
+  });
+  it("previews 5 simulated haggles with the deterministic engine, never below the floor", async () => {
+    const t = mk2(); const r = await (await t.app.request("/owner/policy/preview", { method: "POST", headers: H, body: JSON.stringify({ draft, shop_id: "nomad" }) })).json();
+    expect(r.simulations.length).toBe(5); expect(r.method).toMatch(/deterministic engine/);
+    for (const s of r.simulations) expect(s.final_price_cents).toBeGreaterThanOrEqual(Math.ceil(2500 * 0.78));
+  });
+  it("publishes a new immutable version that always lists R-FINAL-ACCEPT, and the public policy shows it", async () => {
+    const t = mk2(); const before = (await (await t.app.request("/shops/nomad/policy")).json()).version;
+    const pub = await (await t.app.request("/owner/policy/publish", { method: "POST", headers: H, body: JSON.stringify({ draft, shop_id: "nomad" }) })).json();
+    expect(pub.ok).toBe(true); expect(pub.version).toBe(before + 1);
+    const pol = await (await t.app.request("/shops/nomad/policy")).json(); expect(pol.version).toBe(before + 1); expect(pol.public.rules.map((x: any) => x.id)).toEqual(expect.arrayContaining(["R-BULK-10", "R-FINAL-ACCEPT"]));
+    expect(JSON.stringify(pol)).not.toMatch(/salt|floor_default|default_pct/);
+  });
+  function mk2() { const db = openDb(":memory:"); seed(db, env); const app = createApp({ db, env, facilitator: fac, serv: { baseUrl: "", apiKey: "", model: "m", mode: "fallback_only" } }); return { db, app }; }
+});
