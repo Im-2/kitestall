@@ -11,3 +11,4 @@ keystore*
 .env.*
 !.env.example
 data/
+uiref/
